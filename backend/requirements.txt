@@ -1,0 +1,10 @@
+# 智育助教 Agent 后端依赖
+# 注意：本机已验证可用版本为 fastapi 0.128 / chromadb 0.4.24 / openai 2.x / sentence-transformers 3.0
+# 以下为最低版本约束，安装时通常直接装最新版即可。
+fastapi>=0.110
+uvicorn[standard]>=0.30
+openai>=1.50
+sentence-transformers>=3.0
+chromadb>=0.4.24
+python-dotenv>=1.0
+pydantic>=2.7
