@@ -1,4 +1,5 @@
 # Python 编译缓存文件
+24级项目实践课题细节.pdf
 __pycache__/
 *.py[cod]
 *$py.class
