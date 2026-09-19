@@ -98,10 +98,11 @@ async function send() {
 }
 
 onMounted(async () => {
-  await loadConversations()
-  if (conversations.value.length > 0) {
-    await switchConversation(conversations.value[0].id)
-  }
+    // 只加载历史会话列表，但不自动选中任何一个
+    await loadConversations()
+    // 保持新会话状态：无当前会话、无消息
+    currentId.value = null
+    messages.value = []
 })
 </script>
 
@@ -127,7 +128,7 @@ onMounted(async () => {
     <div class="chat-main">
       <div ref="chatBox" class="chat-box">
         <div v-if="messages.length === 0" class="empty-hint">
-          你好！我是你的数据结构苏格拉底助教。<br />
+          你好！我是你的数据结构助教。<br />
           试着问我：「怎么反转单链表？」或「AVL 树什么时候需要旋转？」
         </div>
         <div v-for="(m, i) in messages" :key="i" class="message" :class="m.role">

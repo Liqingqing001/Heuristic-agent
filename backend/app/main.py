@@ -3,8 +3,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import chat, code, conversation, knowledge
+from app.api import chat, code, conversation, knowledge, auth
 from app.config import FRONTEND_DIST
+from app.core.database import init_db
 
 app = FastAPI(title="智育助教 Agent", description="基于 RAG 与苏格拉底教学法的数据结构智能助教")
 
@@ -17,6 +18,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 初始化数据库（建表，幂等）
+init_db()
+
+app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(code.router)
 app.include_router(knowledge.router)
