@@ -653,3 +653,68 @@ def _load_json(text: str | None) -> dict:
         return value if isinstance(value, dict) else {}
     except (TypeError, ValueError):
         return {}
+
+
+# ==================== 个人资料 ====================
+
+PROFILE_FIELDS = (
+    "display_name",
+    "real_name",
+    "school",
+    "department",
+    "major",
+    "gender",
+    "enrollment_year",
+    "bio",
+)
+
+
+def get_profile(user_id: int) -> dict | None:
+    _ensure()
+    conn = get_conn()
+    try:
+        row = conn.execute(
+            "SELECT id, username, role, display_name, real_name, school, department, major, "
+            "gender, enrollment_year, bio, created_at FROM users WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def update_profile(user_id: int, fields: dict) -> dict | None:
+    _ensure()
+    updates = {key: value for key, value in fields.items() if key in PROFILE_FIELDS}
+    if updates:
+        assignments = ", ".join(f"{key} = ?" for key in updates)
+        conn = get_conn()
+        try:
+            conn.execute(
+                f"UPDATE users SET {assignments} WHERE id = ?",
+                (*[str(value) for value in updates.values()], user_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    return get_profile(user_id)
+
+
+def set_password(user_id: int, password_hash: str) -> None:
+    _ensure()
+    conn = get_conn()
+    try:
+        conn.execute("UPDATE users SET password_hash = ? WHERE id = ?", (password_hash, user_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def get_password_hash(user_id: int) -> str | None:
+    _ensure()
+    conn = get_conn()
+    try:
+        row = conn.execute("SELECT password_hash FROM users WHERE id = ?", (user_id,)).fetchone()
+        return row["password_hash"] if row else None
+    finally:
+        conn.close()

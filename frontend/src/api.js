@@ -277,6 +277,33 @@ export async function submitTextAnswer(assignmentId, content) {
   return resp.json()
 }
 
+// ==================== 个人资料 ====================
+export async function getProfile() {
+  const resp = await fetch('/api/profile', { headers: authHeaders() })
+  if (!resp.ok) return null
+  return resp.json()
+}
+
+export async function updateProfile(fields) {
+  const resp = await fetch('/api/profile', {
+    method: 'PATCH',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(fields),
+  })
+  if (!resp.ok) throw new Error(await readError(resp))
+  return resp.json()
+}
+
+export async function changePassword(oldPassword, newPassword) {
+  const resp = await fetch('/api/profile/password', {
+    method: 'POST',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+  })
+  if (!resp.ok) throw new Error(await readError(resp))
+  return resp.json()
+}
+
 // ==================== 知识库 ====================
 export async function ingestKnowledge() {
   const resp = await fetch('/api/knowledge/ingest', {

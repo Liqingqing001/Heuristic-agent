@@ -8,6 +8,7 @@ const LLM_KEY = 'zhiyu_llm_key'
 export const state = reactive({
   user: null,
   activeAssignment: null,
+  assistantMode: 'chat', // 'chat' | 'code'
   status: null,
   llmKey: '',
   remember: false,
@@ -46,6 +47,11 @@ export function setUser(user) {
 
 export function startAssignment(assignment) {
   state.activeAssignment = assignment
+  state.assistantMode = 'code'
+}
+
+export function setAssistantMode(mode) {
+  state.assistantMode = mode === 'code' ? 'code' : 'chat'
 }
 
 export function clearAssignment() {

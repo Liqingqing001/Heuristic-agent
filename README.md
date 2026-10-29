@@ -11,9 +11,9 @@
 
 ### 学生端
 - 注册时选择「学生」身份，用 6 位邀请码加入班级
-- 查看老师发布的任务（代码类 / 问答类），在「代码剖析」页完成后自动提交
-- 对话与代码剖析：AI 只给提示和反问，不输出完整可运行代码
-- 提交后能看到结构化诊断（错因、知识点、严重度、提示层级）
+- 「作业中心」：按班级看任务，按「待完成 / 已提交」筛选，点开能看到自己提交过的代码、AI 诊断全文、错因标签和提交时间
+- 「学习助手」：对话问答与代码诊断合并在一页，两种模式共用知识点与「不泄题」约束
+- 「我的」：个人资料（姓名、昵称、学校、院系、专业、性别、入学年份、简介）和修改密码
 
 ### 教师端
 - 注册时选择「教师」身份，创建班级并生成邀请码
@@ -108,6 +108,7 @@ backend/
     config.py             # .env 与路径常量
     api/
       auth.py             # 注册/登录（含 role）
+      profile.py          # 个人资料、修改密码
       chat.py             # 苏格拉底对话（SSE）
       code.py             # 代码剖析（SSE + 结构化诊断 + 作业提交）
       conversation.py     # 会话管理
@@ -142,10 +143,12 @@ frontend/
     api.js                # 接口封装（Token + X-LLM-Key + SSE）
     App.vue               # 布局、角色页签、状态横幅
     components/
+      AssistantPanel.vue # 学习助手：对话 / 代码诊断两种模式
       ChatPanel.vue       # 对话
       CodeAnalyze.vue     # 代码剖析（含任务模式、诊断标签）
+      HomeworkPanel.vue   # 作业中心（任务列表 + 我的提交）
+      ProfilePanel.vue    # 我的（个人资料 / 安全设置）
       KnowledgeStatus.vue # 知识库浏览/建库
-      StudentPanel.vue    # 我的班级 / 任务
       TeacherPanel.vue    # 班级 / 任务 / 学情看板
       StatusBanner.vue    # 顶部状态横幅
       SettingsModal.vue   # 模型密钥设置

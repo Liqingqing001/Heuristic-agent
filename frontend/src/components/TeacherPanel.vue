@@ -84,8 +84,24 @@ async function doCreateClass() {
   }
 }
 
+function normalizeDue(value) {
+  const text = (value || '').trim()
+  if (!text) return null
+  // 支持 2026-12-01 23:59 / 2026/12/01 23:59 / 2026-12-01T23:59
+  const normalized = text.replace(/\//g, '-').replace(' ', 'T')
+  const matched = normalized.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{1,2}):(\d{2})$/)
+  if (!matched) return NaN
+  const [, year, month, day, hour, minute] = matched
+  return `${year}-${month}-${day}T${hour.padStart(2, '0')}:${minute}`
+}
+
 async function doCreateAssignment() {
   error.value = ''
+  const due = normalizeDue(newAssignment.value.due_at)
+  if (Number.isNaN(due)) {
+    error.value = '截止时间格式应为「2026-12-01 23:59」，也可以留空'
+    return
+  }
   const payload = {
     title: newAssignment.value.title.trim(),
     description: newAssignment.value.description.trim(),
@@ -94,7 +110,7 @@ async function doCreateAssignment() {
       .split(/[,，\s]+/)
       .map((item) => item.trim())
       .filter(Boolean),
-    due_at: newAssignment.value.due_at || null,
+    due_at: due,
   }
   if (!payload.title) {
     error.value = '任务标题不能为空'
@@ -272,7 +288,10 @@ onMounted(loadClasses)
             <option value="question">问答类（文字提交）</option>
           </select>
           <input v-model="newAssignment.kp_ids" placeholder="关联知识点，逗号分隔，例如 ds-01-02, ds-01-03" />
-          <input v-model="newAssignment.due_at" type="datetime-local" />
+          <div class="due-field">
+            <input v-model="newAssignment.due_at" placeholder="截止时间：2026-12-01 23:59（可留空）" />
+            <span class="due-hint">格式：年-月-日 时:分</span>
+          </div>
           <textarea v-model="newAssignment.description" placeholder="任务说明（可选）"></textarea>
           <button class="primary" @click="doCreateAssignment">发布</button>
         </div>
@@ -536,6 +555,21 @@ onMounted(loadClasses)
   grid-column: 1 / -1;
   min-height: 70px;
   resize: vertical;
+}
+
+.due-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.due-field input {
+  width: 100%;
+}
+
+.due-hint {
+  font-size: 11px;
+  color: #94a3b8;
 }
 
 .form-grid button {

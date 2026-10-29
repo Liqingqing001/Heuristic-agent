@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import auth, chat, classes, code, conversation, knowledge, llm
+from app.api import auth, chat, classes, code, conversation, knowledge, llm, profile
 from app.config import FRONTEND_DIST
 from app.core.db import init_db
 
@@ -42,6 +42,7 @@ app.include_router(knowledge.router)
 app.include_router(conversation.router)
 app.include_router(classes.router)
 app.include_router(llm.router)
+app.include_router(profile.router)
 
 
 @app.get("/api/health")

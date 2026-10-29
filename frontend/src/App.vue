@@ -1,38 +1,41 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import ChatPanel from './components/ChatPanel.vue'
-import CodeAnalyze from './components/CodeAnalyze.vue'
+import AssistantPanel from './components/AssistantPanel.vue'
+import HomeworkPanel from './components/HomeworkPanel.vue'
 import KnowledgeStatus from './components/KnowledgeStatus.vue'
+import ProfilePanel from './components/ProfilePanel.vue'
 import StatusBanner from './components/StatusBanner.vue'
 import SettingsModal from './components/SettingsModal.vue'
-import StudentPanel from './components/StudentPanel.vue'
 import TeacherPanel from './components/TeacherPanel.vue'
 import Login from './Login.vue'
 import { apiMe, apiStatus, clearToken, getToken } from './api.js'
-import { clearAssignment, loadLlmKey, setUser, state } from './session.js'
+import { clearAssignment, loadLlmKey, setUser, startAssignment, state } from './session.js'
 
-const activeTab = ref('chat')
+const activeTab = ref('assistant')
 const loggedIn = ref(false)
 const showSettings = ref(false)
 const status = ref(null)
 const checking = ref(true)
 
 const isTeacher = computed(() => state.user?.role === 'teacher')
-const displayName = computed(() => state.user?.display_name || state.user?.username || '')
+const displayName = computed(
+  () => state.user?.display_name || state.user?.real_name || state.user?.username || ''
+)
+const avatarText = computed(() => displayName.value.trim().slice(0, 1).toUpperCase() || '?')
 
 const tabs = computed(() =>
   isTeacher.value
     ? [
-        { key: 'teacher', label: '教师工作台' },
-        { key: 'chat', label: '对话' },
-        { key: 'code', label: '代码剖析' },
-        { key: 'kb', label: '知识库' },
+        { key: 'workspace', label: '教师工作台' },
+        { key: 'assistant', label: '学习助手' },
+        { key: 'knowledge', label: '知识库' },
+        { key: 'profile', label: '我的' },
       ]
     : [
-        { key: 'chat', label: '对话' },
-        { key: 'code', label: '代码剖析' },
-        { key: 'class', label: '我的班级' },
-        { key: 'kb', label: '知识库' },
+        { key: 'assistant', label: '学习助手' },
+        { key: 'homework', label: '作业中心' },
+        { key: 'knowledge', label: '知识库' },
+        { key: 'profile', label: '我的' },
       ]
 )
 
@@ -72,9 +75,9 @@ function logout() {
   window.location.reload()
 }
 
-function startAssignment(assignment) {
-  state.activeAssignment = assignment
-  activeTab.value = 'code'
+function onStartAssignment(assignment) {
+  startAssignment(assignment)
+  activeTab.value = 'assistant'
 }
 
 onMounted(() => {
@@ -97,10 +100,15 @@ onMounted(() => {
         <p>基于 RAG 与苏格拉底教学法的数据结构智能助教 · 只启发，不泄题</p>
       </div>
       <div class="user-bar">
-        <span class="role-badge" :class="isTeacher ? 'teacher' : 'student'">
-          {{ isTeacher ? '教师' : '学生' }}
-        </span>
-        <span class="name">👤 {{ displayName }}</span>
+        <button class="avatar-btn" :title="'个人资料'" @click="activeTab = 'profile'">
+          {{ avatarText }}
+        </button>
+        <div class="user-meta">
+          <span class="name">{{ displayName }}</span>
+          <span class="role-badge" :class="isTeacher ? 'teacher' : 'student'">
+            {{ isTeacher ? '教师' : '学生' }}
+          </span>
+        </div>
         <button class="link-btn" @click="showSettings = true">模型设置</button>
         <button class="link-btn danger" @click="logout">退出</button>
       </div>
@@ -121,16 +129,16 @@ onMounted(() => {
 
     <main class="content">
       <template v-if="isTeacher">
-        <TeacherPanel v-if="activeTab === 'teacher'" />
-        <ChatPanel v-else-if="activeTab === 'chat'" />
-        <CodeAnalyze v-else-if="activeTab === 'code'" />
-        <KnowledgeStatus v-else />
+        <TeacherPanel v-if="activeTab === 'workspace'" />
+        <AssistantPanel v-else-if="activeTab === 'assistant'" />
+        <KnowledgeStatus v-else-if="activeTab === 'knowledge'" />
+        <ProfilePanel v-else />
       </template>
       <template v-else>
-        <ChatPanel v-if="activeTab === 'chat'" />
-        <CodeAnalyze v-else-if="activeTab === 'code'" />
-        <StudentPanel v-else-if="activeTab === 'class'" @start-assignment="startAssignment" />
-        <KnowledgeStatus v-else />
+        <AssistantPanel v-if="activeTab === 'assistant'" />
+        <HomeworkPanel v-else-if="activeTab === 'homework'" @start-assignment="onStartAssignment" />
+        <KnowledgeStatus v-else-if="activeTab === 'knowledge'" />
+        <ProfilePanel v-else />
       </template>
     </main>
 
@@ -153,45 +161,68 @@ onMounted(() => {
 }
 
 .app {
-  max-width: 1080px;
+  max-width: 1120px;
   margin: 0 auto;
   padding: 20px;
   font-family: sans-serif;
 }
 
 .header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
   margin-bottom: 16px;
-  position: relative;
 }
 
-.header h1 {
+.brand h1 {
   color: #3b82f6;
   margin: 0 0 6px;
   font-size: 24px;
 }
 
-.header p {
+.brand p {
   color: #64748b;
   font-size: 13px;
   margin: 0;
 }
 
 .user-bar {
-  position: absolute;
-  top: 0;
-  right: 0;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-size: 13px;
   color: #64748b;
 }
 
+.avatar-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #60a5fa, #3b82f6);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.user-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.name {
+  font-size: 13px;
+  color: #334155;
+}
+
 .role-badge {
-  padding: 2px 8px;
+  padding: 1px 7px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
 }
 
@@ -205,10 +236,6 @@ onMounted(() => {
   background: #f0fdf4;
   color: #15803d;
   border: 1px solid #bbf7d0;
-}
-
-.name {
-  font-size: 12px;
 }
 
 .link-btn {
@@ -239,7 +266,7 @@ onMounted(() => {
 }
 
 .tabs button {
-  padding: 9px 20px;
+  padding: 9px 22px;
   border: none;
   border-radius: 8px;
   background: #e2e8f0;
@@ -260,10 +287,8 @@ onMounted(() => {
 }
 
 @media (max-width: 820px) {
-  .user-bar {
-    position: static;
-    justify-content: center;
-    margin-top: 10px;
+  .header {
+    flex-direction: column;
   }
 
   .tabs {

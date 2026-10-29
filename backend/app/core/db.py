@@ -23,6 +23,13 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     role TEXT NOT NULL DEFAULT 'student',
     display_name TEXT,
+    real_name TEXT DEFAULT '',
+    school TEXT DEFAULT '',
+    department TEXT DEFAULT '',
+    major TEXT DEFAULT '',
+    gender TEXT DEFAULT '',
+    enrollment_year TEXT DEFAULT '',
+    bio TEXT DEFAULT '',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -167,6 +174,10 @@ def init_db() -> dict:
             result["added_columns"].append("users.role")
         if _ensure_column(conn, "users", "display_name", "TEXT"):
             result["added_columns"].append("users.display_name")
+        # 个人资料页字段
+        for column in ("real_name", "school", "department", "major", "gender", "enrollment_year", "bio"):
+            if _ensure_column(conn, "users", column, "TEXT DEFAULT ''"):
+                result["added_columns"].append(f"users.{column}")
         # 更早版本的 conversations 表没有 updated_at
         if _ensure_column(conn, "conversations", "updated_at", "TEXT NOT NULL DEFAULT ''"):
             result["added_columns"].append("conversations.updated_at")
