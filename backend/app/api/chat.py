@@ -1,7 +1,7 @@
-"""苏格拉底对话接口（SSE 流式 + 会话持久化）。"""
+"""苏格拉底对话接口（SSE 流式 + 会话持久化 + BYOK 透传）。"""
 import json
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Header
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -21,7 +21,7 @@ def _sse(payload) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
-def _stream(question: str, conversation_id: int | None, user_id: int):
+def _stream(question: str, conversation_id: int | None, user_id: int, api_key: str | None):
     try:
         # 无会话时自动新建
         if conversation_id is None:
@@ -36,7 +36,7 @@ def _stream(question: str, conversation_id: int | None, user_id: int):
         store.maybe_update_title(conversation_id, question)
 
         full_reply = ""
-        for token in answer_stream(question, history):
+        for token in answer_stream(question, history, api_key=api_key):
             full_reply += token
             yield _sse({"token": token})
 
@@ -48,9 +48,13 @@ def _stream(question: str, conversation_id: int | None, user_id: int):
 
 
 @router.post("/chat")
-def chat_endpoint(req: ChatRequest, user: dict = Depends(get_current_user)):
+def chat_endpoint(
+    req: ChatRequest,
+    user: dict = Depends(get_current_user),
+    x_llm_key: str | None = Header(None, alias="X-LLM-Key"),
+):
     return StreamingResponse(
-        _stream(req.question, req.conversation_id, user["user_id"]),
+        _stream(req.question, req.conversation_id, user["user_id"], x_llm_key),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

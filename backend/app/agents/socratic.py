@@ -1,9 +1,14 @@
 """苏格拉底引导式对话编排：检索 -> 拼装 Prompt -> 流式生成。"""
+from __future__ import annotations
+
+from app.agents import diagnosis as diagnosis_parser
 from app.agents.prompts import (
     CODE_DIAGNOSIS_SYSTEM,
     SOCRATIC_SYSTEM,
     build_context,
+    build_diagnosis_protocol,
 )
+from app.agents.stream_filter import DiagnosisStreamFilter
 from app.core import rag
 from app.core.llm import chat_stream
 from app.utils import code_parser
@@ -25,27 +30,38 @@ def _build_chat_messages(question: str, history: list[dict], retrieved: list[dic
     return messages
 
 
-def answer_stream(question: str, history: list[dict] | None = None):
+def answer_stream(question: str, history: list[dict] | None = None, api_key: str | None = None):
     """普通苏格拉底对话：检索相关知识后流式生成引导性回复。"""
     history = history or []
     retrieved = rag.search(question)
     messages = _build_chat_messages(question, history, retrieved)
-    yield from chat_stream(messages)
+    yield from chat_stream(messages, api_key=api_key)
 
 
-def analyze_code_stream(code: str, language: str = "cpp", question: str | None = None):
-    """代码剖析：bug 库加权检索 + 静态线索 + 流式诊断引导。"""
+def analyze_code_stream(
+    code: str,
+    language: str = "cpp",
+    question: str | None = None,
+    api_key: str | None = None,
+):
+    """代码剖析：知识点 + bug 库加权检索 + 静态线索 + 结构化诊断。
+
+    产出 ``("token", 文本)`` 若干次，最后产出 ``("diagnosis", dict)``。
+    """
     query = (question or "") + "\n" + code
 
-    # bug 库优先（代码 debug 场景 bug 案例最相关），讲义补充
+    # 知识点优先（统计掌握度要用），bug 库补充案例，讲义兜底
+    kps = rag.search(query, categories=[rag.KP_COLLECTION], top_k=3)
     bugs = rag.search(query, categories=["buglib"], top_k=2)
     lectures = rag.search(query, categories=["lecture", "solutions"], top_k=2)
-    retrieved = sorted(bugs + lectures, key=lambda x: x["distance"])[:4]
+    retrieved = sorted(kps + bugs + lectures, key=lambda item: item["distance"])[:6]
 
     context = build_context(retrieved)
     system = CODE_DIAGNOSIS_SYSTEM
     if context:
         system += "\n\n" + context
+    kp_ids = [item["kp_id"] for item in retrieved if item.get("kp_id")]
+    system += "\n\n" + build_diagnosis_protocol(kp_ids)
 
     clues = code_parser.analyze(code)
 
@@ -63,4 +79,18 @@ def analyze_code_stream(code: str, language: str = "cpp", question: str | None =
         {"role": "system", "content": system},
         {"role": "user", "content": user_content},
     ]
-    yield from chat_stream(messages)
+
+    splitter = DiagnosisStreamFilter()
+    for chunk in chat_stream(messages, api_key=api_key, temperature=0.4):
+        visible = splitter.feed(chunk)
+        if visible:
+            yield ("token", visible)
+
+    tail, payload = splitter.finish()
+    if tail:
+        yield ("token", tail)
+
+    parsed = diagnosis_parser.parse(payload)
+    if parsed is None:
+        parsed = diagnosis_parser.heuristic(code, clues)
+    yield ("diagnosis", parsed)

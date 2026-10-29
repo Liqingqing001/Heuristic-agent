@@ -1,13 +1,30 @@
 """FastAPI 应用入口。"""
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.api import chat, code, conversation, knowledge, auth
+from app.api import auth, chat, classes, code, conversation, knowledge, llm
 from app.config import FRONTEND_DIST
-from app.core.database import init_db
+from app.core.db import init_db
 
-app = FastAPI(title="智育助教 Agent", description="基于 RAG 与苏格拉底教学法的数据结构智能助教")
+logger = logging.getLogger("uvicorn.error")
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    result = init_db()
+    logger.info("数据库就绪：%s", result)
+    yield
+
+
+app = FastAPI(
+    title="智育助教 Agent",
+    description="基于 RAG 与苏格拉底教学法的数据结构智能助教",
+    lifespan=lifespan,
+)
 
 # 开发阶段允许跨域，方便 vite dev server 直连后端
 app.add_middleware(
@@ -18,14 +35,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 初始化数据库（建表，幂等）
-init_db()
-
 app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(code.router)
 app.include_router(knowledge.router)
 app.include_router(conversation.router)
+app.include_router(classes.router)
+app.include_router(llm.router)
 
 
 @app.get("/api/health")

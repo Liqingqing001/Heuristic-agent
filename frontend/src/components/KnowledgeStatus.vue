@@ -1,12 +1,19 @@
 <script setup>
-    import { ref, onMounted } from 'vue'
+    import { computed, ref, onMounted } from 'vue'
     import { marked } from 'marked'
+    import { ingestKnowledge } from '../api.js'
+    import { state } from '../session.js'
 
     const API = '/api/knowledge'
 
-    const stats = ref({ lecture: 0, solutions: 0, buglib: 0 })
+    const stats = ref({ lecture: 0, solutions: 0, buglib: 0, kp_points: 0 })
     const ingesting = ref(false)
     const loading = ref(false)
+    const isTeacher = computed(() => state.user?.role === 'teacher')
+
+    function statCount(cat) {
+        return stats.value[cat.statKey || cat.key] || 0
+    }
 
     // 视图：'home' | 'category' | 'search'
     const viewMode = ref('home')
@@ -19,6 +26,7 @@
         { key: 'lecture', name: '讲义', desc: '数据结构核心知识点讲解', icon: '📘', color: '#3b82f6' },
         { key: 'solutions', name: '题解', desc: '典型题目的解题思路与伪代码', icon: '💡', color: '#f59e0b' },
         { key: 'buglib', name: 'Bug 库', desc: '高频错误现象、原因与定位', icon: '🐛', color: '#ef4444' },
+        { key: 'kp', statKey: 'kp_points', name: '知识点', desc: '带编号、前置与分级题的结构化知识点', icon: '🎯', color: '#10b981' },
     ]
 
     async function loadStats() {
@@ -78,11 +86,15 @@
         if (ingesting.value) return
         ingesting.value = true
         try {
-            await fetch(`${API}/ingest`, { method: 'POST' })
+            const result = await ingestKnowledge()
             await loadStats()
-            alert('建库完成')
+            if (result.status === 'error') {
+                alert('建库失败：' + result.message)
+            } else {
+                alert('建库完成：' + JSON.stringify(result.stats))
+            }
         } catch (e) {
-            alert('建库失败：' + e)
+            alert('建库失败：' + (e.message || e))
         }
         ingesting.value = false
     }
@@ -120,14 +132,17 @@
                         <div class="cat-name">{{ cat.name }}</div>
                         <div class="cat-desc">{{ cat.desc }}</div>
                     </div>
-                    <div class="cat-count">{{ stats[cat.key] || 0 }} 条</div>
+                    <div class="cat-count">{{ statCount(cat) }} 条</div>
                 </div>
             </div>
 
             <div class="rebuild-row">
-                <button :disabled="ingesting" @click="rebuild">
+                <button v-if="isTeacher" :disabled="ingesting" @click="rebuild">
                     {{ ingesting ? '建库中…' : '重新建库' }}
                 </button>
+                <span v-else class="rebuild-hint">
+                    知识库由教师统一建库；内容有更新时可以请老师点一次「重新建库」。
+                </span>
             </div>
         </div>
 
@@ -303,6 +318,11 @@
                 opacity: 0.5;
                 cursor: not-allowed;
             }
+
+    .rebuild-hint {
+        font-size: 12px;
+        color: #94a3b8;
+    }
 
     /* 分类/搜索列表 */
     .list-title {

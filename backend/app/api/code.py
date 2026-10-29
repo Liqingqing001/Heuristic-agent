@@ -1,7 +1,7 @@
-"""代码剖析接口（SSE 流式 + 后端持久化）。"""
+"""代码剖析接口（SSE 流式 + 结构化诊断 + 作业提交）。"""
 import json
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
@@ -16,20 +16,48 @@ class CodeRequest(BaseModel):
     code: str
     language: str = "cpp"
     question: str | None = None
+    assignment_id: int | None = None
 
 
 def _sse(payload) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
-def _stream(code: str, language: str, question: str | None, user_id: int, analysis_id: int):
+def _stream(
+    code: str,
+    language: str,
+    question: str | None,
+    user_id: int,
+    analysis_id: int,
+    assignment_id: int | None,
+    api_key: str | None,
+):
     try:
         full = ""
-        for token in analyze_code_stream(code, language, question):
-            full += token
-            yield _sse({"token": token})
-        # 剖析完成，写入数据库
-        store.update_code_analysis_result(analysis_id, user_id, full, code, question)
+        diagnosis = {}
+        for kind, payload in analyze_code_stream(code, language, question, api_key=api_key):
+            if kind == "token":
+                full += payload
+                yield _sse({"token": payload})
+            elif kind == "diagnosis":
+                diagnosis = payload
+                yield _sse({"diagnosis": payload})
+
+        # 剖析完成，写入数据库（含结构化诊断）
+        store.update_code_analysis_result(analysis_id, user_id, full, code, question, diagnosis)
+
+        if assignment_id:
+            submission_id = store.upsert_submission(
+                assignment_id=assignment_id,
+                user_id=user_id,
+                content=code,
+                language=language,
+                status="analyzed",
+                ai_result=full,
+                diagnosis=diagnosis,
+            )
+            yield _sse({"submission_id": submission_id})
+
         yield _sse({"analysis_id": analysis_id, "done": True})
     except Exception as e:
         yield _sse({"error": str(e)})
@@ -37,11 +65,32 @@ def _stream(code: str, language: str, question: str | None, user_id: int, analys
 
 
 @router.post("/code/analyze")
-def analyze_endpoint(req: CodeRequest, user: dict = Depends(get_current_user)):
+def analyze_endpoint(
+    req: CodeRequest,
+    user: dict = Depends(get_current_user),
+    x_llm_key: str | None = Header(None, alias="X-LLM-Key"),
+):
+    if req.assignment_id is not None:
+        assignment = store.get_assignment(req.assignment_id)
+        if not assignment:
+            raise HTTPException(404, "任务不存在")
+        if not store.is_member(assignment["class_id"], user["user_id"]):
+            raise HTTPException(403, "你不在该任务所属的班级里")
+        if assignment["type"] != "code":
+            raise HTTPException(400, "该任务不是代码类任务")
+
     # 先建一条空记录，用于承接流式结果
     rec = store.create_code_analysis(user["user_id"], req.code, req.language, req.question)
     return StreamingResponse(
-        _stream(req.code, req.language, req.question, user["user_id"], rec["id"]),
+        _stream(
+            req.code,
+            req.language,
+            req.question,
+            user["user_id"],
+            rec["id"],
+            req.assignment_id,
+            x_llm_key,
+        ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

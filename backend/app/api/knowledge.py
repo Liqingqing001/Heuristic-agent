@@ -1,9 +1,14 @@
 """知识库建库、统计、浏览、搜索接口。"""
-from pathlib import Path
-from fastapi import APIRouter, Query
+from __future__ import annotations
+
 import re
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, Query
 
 from app.core import rag
+from app.core.auth import require_teacher
+from app.utils import kp_meta
 
 router = APIRouter(prefix="/api", tags=["knowledge"])
 
@@ -14,11 +19,12 @@ CATEGORIES = {
     "lecture": "讲义",
     "solutions": "题解",
     "buglib": "Bug库",
+    "kp": "知识点",
 }
 
 
 def _parse_md(path: Path):
-    """解析一个 Markdown 文件，按二级标题 ## 分块"""
+    """解析一个 Markdown 文件，按二级标题 ## 分块。"""
     try:
         text = path.read_text(encoding="utf-8")
     except Exception:
@@ -38,8 +44,45 @@ def _parse_md(path: Path):
     return items
 
 
+def _parse_kp(path: Path) -> list[dict]:
+    """知识点文件：一个文件算一条，标题取自 front matter。"""
+    try:
+        kp = kp_meta.load_kp(path)
+    except Exception:
+        return []
+    meta = kp["meta"]
+    sections = kp["sections"]
+    content = "\n\n".join(
+        f"## {name}\n{text}" for name, text in sections.items() if text
+    )
+    return [{
+        "title": str(meta.get("title") or path.stem),
+        "content": content,
+        "source": path.stem,
+        "kp_id": meta.get("id"),
+        "chapter": meta.get("chapter"),
+        "difficulty": meta.get("difficulty"),
+        "type": meta.get("type"),
+    }]
+
+
+def _items_of(category: str) -> list[dict]:
+    folder = KNOWLEDGE_DIR / category
+    if not folder.exists():
+        return []
+    items: list[dict] = []
+    for md_file in sorted(folder.glob("*.md")):
+        if md_file.name.startswith("_") or md_file.name.lower() == "readme.md":
+            continue
+        if category == "kp":
+            items.extend(_parse_kp(md_file))
+        else:
+            items.extend(_parse_md(md_file))
+    return items
+
+
 @router.post("/knowledge/ingest")
-def ingest():
+def ingest(_: dict = Depends(require_teacher)):
     """触发建库（幂等）。首次会下载 BGE 模型，耗时较长。"""
     try:
         stats = rag.ingest()
@@ -56,21 +99,14 @@ def stats():
 
 @router.get("/knowledge/list")
 def list_knowledge(category: str = Query("lecture")):
-    """列出某个分类下的所有知识条目"""
-    folder = KNOWLEDGE_DIR / category
-    if not folder.exists():
-        return {"items": [], "total": 0}
-
-    items = []
-    for md_file in sorted(folder.glob("*.md")):
-        items.extend(_parse_md(md_file))
-
+    """列出某个分类下的所有知识条目。"""
+    items = _items_of(category)
     return {"items": items, "total": len(items)}
 
 
 @router.get("/knowledge/search")
 def search_knowledge(q: str = Query(...), top_k: int = Query(20)):
-    """简易搜索：遍历所有 Markdown，标题或内容包含关键词就返回"""
+    """简易搜索：遍历所有 Markdown，标题或内容包含关键词就返回。"""
     q = q.strip()
     if not q:
         return {"items": [], "total": 0}
@@ -79,23 +115,17 @@ def search_knowledge(q: str = Query(...), top_k: int = Query(20)):
     items = []
 
     for cat_key in CATEGORIES:
-        folder = KNOWLEDGE_DIR / cat_key
-        if not folder.exists():
-            continue
-        for md_file in sorted(folder.glob("*.md")):
-            for item in _parse_md(md_file):
-                text = (item["title"] + " " + item["content"]).lower()
-                if q_lower in text:
-                    items.append({
-                        **item,
-                        "category": cat_key,
-                        "category_name": CATEGORIES[cat_key],
-                    })
-                    if len(items) >= top_k:
-                        break
-            if len(items) >= top_k:
-                break
         if len(items) >= top_k:
             break
+        for item in _items_of(cat_key):
+            text = (item["title"] + " " + item["content"]).lower()
+            if q_lower in text:
+                items.append({
+                    **item,
+                    "category": cat_key,
+                    "category_name": CATEGORIES[cat_key],
+                })
+                if len(items) >= top_k:
+                    break
 
     return {"items": items, "total": len(items)}

@@ -1,5 +1,5 @@
 <script setup>
-    import { ref, nextTick, onMounted } from 'vue'
+    import { computed, ref, nextTick, onMounted } from 'vue'
     import { marked } from 'marked'
     import hljs from 'highlight.js'
     import {
@@ -8,6 +8,7 @@
         getCodeAnalysis,
         deleteCodeAnalysis,
     } from '../api.js'
+    import { clearAssignment, state } from '../session.js'
 
     // 表单状态
     const code = ref('')
@@ -16,6 +17,17 @@
     const result = ref('')
     const loading = ref(false)
     const resultBox = ref(null)
+
+    // 来自「我的班级」的任务
+    const assignment = computed(() => state.activeAssignment)
+    const diagnosis = ref(null)
+    const submitted = ref(false)
+
+    function exitAssignment() {
+        clearAssignment()
+        diagnosis.value = null
+        submitted.value = false
+    }
 
     // 历史记录
     const history = ref([])
@@ -88,6 +100,8 @@
         if (!c || loading.value) return
 
         result.value = ''
+        diagnosis.value = null
+        submitted.value = false
         loading.value = true
         currentId.value = null  // 提交后是新记录
 
@@ -100,7 +114,12 @@
 
         let accumulated = ''
         const doneInfo = await streamAnalyze(
-            { code: c, language: language.value, question: finalQuestion || null },
+            {
+                code: c,
+                language: language.value,
+                question: finalQuestion || null,
+                assignment_id: assignment.value?.id ?? null,
+            },
             (token) => {
                 accumulated += token
                 result.value = accumulated
@@ -114,6 +133,12 @@
         // 用后端返回的 id 标记当前记录
         if (doneInfo && doneInfo.analysis_id) {
             currentId.value = doneInfo.analysis_id
+        }
+        if (doneInfo && doneInfo.diagnosis) {
+            diagnosis.value = doneInfo.diagnosis
+        }
+        if (doneInfo && doneInfo.submission_id) {
+            submitted.value = true
         }
 
         loading.value = false
@@ -144,6 +169,18 @@
 
         <!-- 右侧主区域 -->
         <div class="code-main">
+            <div v-if="assignment" class="assignment-banner">
+                <div>
+                    <strong>正在完成任务：{{ assignment.title }}</strong>
+                    <span v-if="assignment.class_name" class="class-name">· {{ assignment.class_name }}</span>
+                    <div class="tip">
+                        这次诊断会记录到任务提交里，老师可以在学情看板看到结果。
+                        <span v-if="submitted" class="done">已提交 ✓</span>
+                    </div>
+                </div>
+                <button class="exit-btn" @click="exitAssignment">退出任务</button>
+            </div>
+
             <div class="code-form">
                 <textarea v-model="code" placeholder="粘贴你的 C/C++ 代码…"></textarea>
 
@@ -168,6 +205,16 @@
                         {{ loading ? '诊断中…' : '开始剖析' }}
                     </button>
                 </div>
+            </div>
+
+            <div v-if="diagnosis" class="diag-chips">
+                <span v-for="item in diagnosis.error_types" :key="item" class="chip error">{{ item }}</span>
+                <span class="chip">严重度：{{ diagnosis.severity }}</span>
+                <span v-if="diagnosis.hint_level_reached" class="chip">
+                    提示层级：{{ diagnosis.hint_level_reached }}/3
+                </span>
+                <span v-for="kp in diagnosis.kp_ids" :key="kp" class="chip kp">{{ kp }}</span>
+                <span v-if="submitted" class="chip done">已提交给老师</span>
             </div>
 
             <div v-if="result" ref="resultBox" class="result-box" v-html="renderMarkdown(result)"></div>
@@ -360,6 +407,82 @@
         font-size: 13px;
         padding: 20px;
     }
+
+    .assignment-banner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 10px;
+        padding: 10px 14px;
+    }
+
+        .assignment-banner strong {
+            color: #1d4ed8;
+            font-size: 13px;
+        }
+
+        .assignment-banner .class-name {
+            color: #60a5fa;
+            font-size: 12px;
+            margin-left: 4px;
+        }
+
+        .assignment-banner .tip {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .assignment-banner .done {
+            color: #15803d;
+            margin-left: 6px;
+        }
+
+    .exit-btn {
+        border: 1px solid #93c5fd;
+        background: white;
+        color: #1d4ed8;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 12px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .diag-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+        .diag-chips .chip {
+            font-size: 12px;
+            padding: 2px 9px;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .diag-chips .chip.error {
+            background: #fff7ed;
+            color: #c2410c;
+            border: 1px solid #fed7aa;
+        }
+
+        .diag-chips .chip.kp {
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-family: monospace;
+        }
+
+        .diag-chips .chip.done {
+            background: #f0fdf4;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
 
         .empty-hint.small {
             font-size: 12px;
