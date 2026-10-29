@@ -18,6 +18,10 @@ DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
 DEEPSEEK_BASE_URL = os.getenv("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
 DEEPSEEK_MODEL = os.getenv("DEEPSEEK_MODEL", "deepseek-chat")
 
+# 是否允许回退到服务端 .env 里的公共 key。
+# 默认关闭：强制 BYOK，没填个人 key 的请求直接报错，不会消耗部署者的额度。
+ALLOW_SERVER_KEY = os.getenv("ALLOW_SERVER_KEY", "0").strip().lower() in ("1", "true", "yes", "on")
+
 # 本地向量化模型
 EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")
 

@@ -7,13 +7,16 @@ from __future__ import annotations
 
 from openai import OpenAI
 
-from app.config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL
+from app.config import ALLOW_SERVER_KEY, DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL
 
 _default_client: OpenAI | None = None
 
 
 def _client(api_key: str | None = None) -> OpenAI:
-    key = (api_key or "").strip() or DEEPSEEK_API_KEY
+    personal = (api_key or "").strip()
+    # 默认严格 BYOK：只有显式设置 ALLOW_SERVER_KEY=1 才回退到服务端 key
+    fallback = DEEPSEEK_API_KEY if ALLOW_SERVER_KEY else ""
+    key = personal or fallback
     if not key:
         raise RuntimeError("未配置模型密钥：请在页面右上角「模型设置」里填写你自己的 API Key")
     if key == DEEPSEEK_API_KEY:
@@ -54,10 +57,13 @@ def chat(messages: list[dict], temperature: float = 0.7, api_key: str | None = N
 
 
 def status() -> dict:
-    """给前端状态横幅用：只暴露"有没有服务端 key"，绝不返回 key 本身。"""
+    """给前端状态横幅用：只暴露"有没有可用的服务端 key"，绝不返回 key 本身。"""
     return {
         "provider": "deepseek",
         "model": DEEPSEEK_MODEL,
-        "server_key": bool(DEEPSEEK_API_KEY),
+        # 只有显式允许回退时才算"服务端可用"，否则一律要求使用者自备
+        "server_key": bool(DEEPSEEK_API_KEY) and ALLOW_SERVER_KEY,
+        "server_key_configured": bool(DEEPSEEK_API_KEY),
+        "allow_server_key": ALLOW_SERVER_KEY,
         "byok_supported": True,
     }
