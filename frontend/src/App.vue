@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import AssistantPanel from './components/AssistantPanel.vue'
 import HomeworkPanel from './components/HomeworkPanel.vue'
 import KnowledgeStatus from './components/KnowledgeStatus.vue'
@@ -89,11 +89,27 @@ function onStartAssignment(assignment) {
   activeTab.value = 'assistant'
 }
 
+// 用 #/tab 记录当前页签，刷新/分享链接能回到同一页
+function applyHash() {
+  const key = (window.location.hash || '').replace(/^#\/?/, '')
+  if (key && tabs.value.some((tab) => tab.key === key)) {
+    activeTab.value = key
+  }
+}
+
+watch(activeTab, (value) => {
+  const target = `#/${value}`
+  if (window.location.hash !== target) {
+    window.history.replaceState(null, '', target)
+  }
+})
+
 onMounted(() => {
-  checkAuth()
+  checkAuth().then(applyHash)
   window.addEventListener('auth-expired', () => {
     loggedIn.value = false
   })
+  window.addEventListener('hashchange', applyHash)
 })
 </script>
 

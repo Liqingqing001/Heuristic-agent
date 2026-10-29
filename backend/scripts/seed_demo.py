@@ -157,6 +157,48 @@ def ensure_assignments(class_id: int, teacher_id: int) -> list[dict]:
     return store.list_assignments(class_id)
 
 
+def seed_demo_student_mastery() -> None:
+    """给演示学生补几条掌握度，保证首页「薄弱知识点」不是空的。"""
+    conn = get_conn()
+    try:
+        row = conn.execute("SELECT id FROM users WHERE username = 'demo_student'").fetchone()
+        if not row:
+            return
+        user_id = row["id"]
+        samples = [
+            ("ds-01-02", 2, 42.0, 2, "high"),
+            ("ds-01-03", 1, 48.0, 3, "medium"),
+            ("ds-02-01", 3, 66.0, 1, "low"),
+        ]
+        for kp_id, attempts, score, hint, severity in samples:
+            conn.execute(
+                "INSERT INTO kp_mastery (user_id, kp_id, attempts, score, last_hint, last_severity, updated_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, datetime('now')) "
+                "ON CONFLICT(user_id, kp_id) DO UPDATE SET "
+                "attempts = excluded.attempts, score = excluded.score, "
+                "last_hint = excluded.last_hint, last_severity = excluded.last_severity, "
+                "updated_at = excluded.updated_at",
+                (user_id, kp_id, attempts, score, hint, severity),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def backdate(assignment_id: int, user_id: int, days: int) -> None:
+    """把提交时间往前挪，让趋势图有分布（纯演示用）。"""
+    conn = get_conn()
+    try:
+        conn.execute(
+            "UPDATE submissions SET submitted_at = datetime('now', ?) "
+            "WHERE assignment_id = ? AND user_id = ?",
+            (f"-{days} days", assignment_id, user_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def main() -> int:
     init_db()
     teacher = None
@@ -217,6 +259,7 @@ def main() -> int:
                 ai_result=ai_text,
                 diagnosis=diagnosis,
             )
+            backdate(assignment["id"], student["id"], (index * 2 + slot * 3) % 13)
             submitted += 1
             store.record_mastery(student["id"], diagnosis["kp_ids"], hint, severity)
 
@@ -253,9 +296,11 @@ def main() -> int:
                     ai_result="",
                     diagnosis={},
                 )
+                backdate(assignment["id"], student["id"], (index + 4) % 13)
                 submitted += 1
 
     print(f"提交：{submitted} 条，其中已批阅 {graded} 条")
+    seed_demo_student_mastery()
     print("完成。用 demo_teacher / demo123456 登录看教师端，用 demo_student / demo123456 看学生端。")
     return 0
 
