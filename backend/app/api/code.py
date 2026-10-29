@@ -56,6 +56,13 @@ def _stream(
                 ai_result=full,
                 diagnosis=diagnosis,
             )
+            # 按诊断到的知识点累计掌握度（教师端/学生端首页用）
+            store.record_mastery(
+                user_id,
+                diagnosis.get("kp_ids"),
+                diagnosis.get("hint_level_reached"),
+                diagnosis.get("severity"),
+            )
             yield _sse({"submission_id": submission_id})
 
         yield _sse({"analysis_id": analysis_id, "done": True})

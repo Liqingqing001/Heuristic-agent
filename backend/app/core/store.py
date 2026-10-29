@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 import secrets
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.core.db import get_conn, init_db
 
@@ -20,6 +20,18 @@ _ready = False
 
 def _now() -> str:
     return datetime.now().isoformat(timespec="seconds")
+
+
+def _is_overdue(due_at: str | None) -> bool:
+    if not due_at:
+        return False
+    text = str(due_at).strip().replace("/", "-").replace(" ", "T")
+    for fmt in ("%Y-%m-%dT%H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+        try:
+            return datetime.strptime(text, fmt) < datetime.now()
+        except ValueError:
+            continue
+    return False
 
 
 def _ensure() -> None:
@@ -435,10 +447,11 @@ def list_assignments(class_id: int, user_id: int | None = None) -> list[dict]:
             item["kp_ids"] = [k for k in (item.get("kp_ids") or "").split(",") if k]
             item["submitted_count"] = item.get("submitted_count", 0)
             item["member_count"] = item.get("member_count", 0)
+            item["is_overdue"] = _is_overdue(item.get("due_at"))
             item["my_submission"] = None
         if user_id is not None:
             mine = conn.execute(
-                "SELECT id, assignment_id, status, score, submitted_at FROM submissions "
+                "SELECT id, assignment_id, status, score, feedback, graded_at, submitted_at FROM submissions "
                 "WHERE user_id = ? AND assignment_id IN (SELECT id FROM assignments WHERE class_id = ?)",
                 (user_id, class_id),
             ).fetchall()
@@ -485,7 +498,8 @@ def upsert_submission(
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
             "ON CONFLICT(assignment_id, user_id) DO UPDATE SET "
             "content = excluded.content, language = excluded.language, status = excluded.status, "
-            "ai_result = excluded.ai_result, diagnosis = excluded.diagnosis, submitted_at = excluded.submitted_at",
+            "ai_result = excluded.ai_result, diagnosis = excluded.diagnosis, submitted_at = excluded.submitted_at, "
+            "score = NULL, feedback = '', graded_at = '', graded_by = 0",
             (
                 assignment_id,
                 user_id,
@@ -512,8 +526,8 @@ def list_submissions(assignment_id: int) -> list[dict]:
     conn = get_conn()
     try:
         rows = conn.execute(
-            "SELECT s.id, s.user_id, s.language, s.status, s.score, s.submitted_at, "
-            "       s.diagnosis, u.username, u.display_name "
+            "SELECT s.id, s.user_id, s.language, s.status, s.score, s.feedback, s.graded_at, "
+            "       s.submitted_at, s.diagnosis, u.username, u.display_name "
             "FROM submissions s JOIN users u ON u.id = s.user_id "
             "WHERE s.assignment_id = ? ORDER BY s.submitted_at ASC",
             (assignment_id,),
@@ -535,6 +549,148 @@ def get_submission(submission_id: int) -> dict | None:
         return dict(row) if row else None
     finally:
         conn.close()
+
+
+def grade_submission(
+    submission_id: int,
+    teacher_id: int,
+    score: float,
+    feedback: str = "",
+    returned: bool = False,
+) -> dict | None:
+    """教师批阅：打分、写评语，或退回重做。"""
+    _ensure()
+    submission = get_submission(submission_id)
+    if not submission:
+        return None
+    assignment = get_assignment(submission["assignment_id"])
+    if not assignment or not is_teacher_of_class(assignment["class_id"], teacher_id):
+        return None
+
+    status = "returned" if returned else "graded"
+    conn = get_conn()
+    try:
+        conn.execute(
+            "UPDATE submissions SET score = ?, feedback = ?, status = ?, graded_at = ?, graded_by = ? "
+            "WHERE id = ?",
+            (score, feedback.strip(), status, _now(), teacher_id, submission_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return get_submission(submission_id)
+
+
+# ==================== 知识点掌握度 ====================
+
+def record_mastery(user_id: int, kp_ids: list[str] | None, hint: int | None, severity: str | None) -> None:
+    """每次诊断后按知识点累加掌握度：提示层级越浅、严重度越低，得分越高。"""
+    ids = [kp_id for kp_id in (kp_ids or []) if kp_id]
+    if not ids:
+        return
+    _ensure()
+    delta = {1: 15, 2: 5, 3: -10}.get(hint, 0)
+    if severity == "high":
+        delta -= 5
+    elif severity == "low":
+        delta += 3
+    now = _now()
+    start = max(0, min(100, 50 + delta))
+    conn = get_conn()
+    try:
+        for kp_id in ids:
+            conn.execute(
+                "INSERT INTO kp_mastery (user_id, kp_id, attempts, score, last_hint, last_severity, updated_at) "
+                "VALUES (?, ?, 1, ?, ?, ?, ?) "
+                "ON CONFLICT(user_id, kp_id) DO UPDATE SET "
+                "  attempts = attempts + 1, "
+                "  score = max(0, min(100, score + ?)), "
+                "  last_hint = excluded.last_hint, "
+                "  last_severity = excluded.last_severity, "
+                "  updated_at = excluded.updated_at",
+                (user_id, kp_id, start, hint, severity or "", now, delta),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def _kp_titles() -> dict[str, dict]:
+    """知识点编号 -> 标题/章节（读文件，量小，直接读）。"""
+    from app.config import KNOWLEDGE_DIR
+    from app.utils import kp_meta
+
+    titles: dict[str, dict] = {}
+    for path in kp_meta.iter_kp_files(KNOWLEDGE_DIR / "kp"):
+        try:
+            kp = kp_meta.load_kp(path)
+        except Exception:
+            continue
+        meta = kp["meta"]
+        if meta.get("id"):
+            titles[str(meta["id"])] = {
+                "title": str(meta.get("title") or ""),
+                "chapter": meta.get("chapter"),
+            }
+    return titles
+
+
+def mastery_for_user(user_id: int) -> list[dict]:
+    _ensure()
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT kp_id, attempts, score, last_hint, last_severity, updated_at "
+            "FROM kp_mastery WHERE user_id = ? ORDER BY score ASC",
+            (user_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+    titles = _kp_titles()
+    items = []
+    for row in rows:
+        info = titles.get(row["kp_id"], {})
+        items.append({
+            "kp_id": row["kp_id"],
+            "title": info.get("title", ""),
+            "chapter": info.get("chapter"),
+            "attempts": row["attempts"],
+            "score": round(row["score"], 1),
+            "last_hint": row["last_hint"],
+            "last_severity": row["last_severity"],
+            "updated_at": row["updated_at"],
+        })
+    return items
+
+
+def class_mastery(class_id: int) -> list[dict]:
+    """班级知识点掌握度：按知识点聚合成员平均分，弱的排前面。"""
+    _ensure()
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT m.kp_id, AVG(m.score) AS avg_score, SUM(m.attempts) AS attempts, "
+            "       COUNT(DISTINCT m.user_id) AS student_count "
+            "FROM kp_mastery m "
+            "JOIN class_members cm ON cm.user_id = m.user_id AND cm.class_id = ? "
+            "GROUP BY m.kp_id ORDER BY avg_score ASC",
+            (class_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+    titles = _kp_titles()
+    items = []
+    for row in rows:
+        info = titles.get(row["kp_id"], {})
+        items.append({
+            "kp_id": row["kp_id"],
+            "title": info.get("title", ""),
+            "chapter": info.get("chapter"),
+            "avg_score": round(row["avg_score"], 1),
+            "attempts": row["attempts"],
+            "student_count": row["student_count"],
+        })
+    return items
 
 
 def is_teacher_of_class(class_id: int, user_id: int) -> bool:
@@ -612,10 +768,49 @@ def class_overview(class_id: int) -> dict:
             "title": assignment["title"],
             "type": assignment["type"],
             "due_at": assignment["due_at"],
+            "is_overdue": _is_overdue(assignment["due_at"]),
             "submitted": submitted,
             "member_count": len(members),
             "rate": round(submitted / len(members), 3) if members else 0.0,
         })
+
+    # 近 14 天提交趋势
+    day_counter: dict[str, int] = {}
+    for sub in submissions:
+        day = str(sub.get("submitted_at", ""))[:10]
+        if day:
+            day_counter[day] = day_counter.get(day, 0) + 1
+    today = datetime.now().date()
+    trend = [
+        {
+            "date": (today - timedelta(days=offset)).isoformat(),
+            "count": day_counter.get((today - timedelta(days=offset)).isoformat(), 0),
+        }
+        for offset in range(13, -1, -1)
+    ]
+
+    # 分数段分布（已批阅）
+    buckets = [
+        {"label": "0-59", "count": 0},
+        {"label": "60-69", "count": 0},
+        {"label": "70-79", "count": 0},
+        {"label": "80-89", "count": 0},
+        {"label": "90-100", "count": 0},
+    ]
+    for sub in submissions:
+        score = sub.get("score")
+        if score is None:
+            continue
+        if score < 60:
+            buckets[0]["count"] += 1
+        elif score < 70:
+            buckets[1]["count"] += 1
+        elif score < 80:
+            buckets[2]["count"] += 1
+        elif score < 90:
+            buckets[3]["count"] += 1
+        else:
+            buckets[4]["count"] += 1
 
     return {
         "class": cls,
@@ -631,6 +826,12 @@ def class_overview(class_id: int) -> dict:
             ({"level": key, "count": value} for key, value in severity_counter.items()),
             key=lambda item: -item["count"],
         ),
+        "pending_grading": sum(
+            1 for sub in submissions if sub.get("status") in ("submitted", "analyzed")
+        ),
+        "graded_count": sum(1 for sub in submissions if sub.get("status") == "graded"),
+        "trend": trend,
+        "score_distribution": buckets,
         "recent_submissions": [
             {
                 "id": sub["id"],
@@ -639,6 +840,7 @@ def class_overview(class_id: int) -> dict:
                 "username": sub["username"],
                 "submitted_at": sub["submitted_at"],
                 "status": sub["status"],
+                "score": sub.get("score"),
             }
             for sub in submissions[:10]
         ],

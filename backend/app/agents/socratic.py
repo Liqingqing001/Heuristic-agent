@@ -31,11 +31,31 @@ def _build_chat_messages(question: str, history: list[dict], retrieved: list[dic
 
 
 def answer_stream(question: str, history: list[dict] | None = None, api_key: str | None = None):
-    """普通苏格拉底对话：检索相关知识后流式生成引导性回复。"""
+    """普通苏格拉底对话：检索相关知识后流式生成引导性回复。
+
+    产出 ``("references", [...])`` 一次，随后是 ``("token", 文本)``。
+    """
     history = history or []
     retrieved = rag.search(question)
+
+    references: list[dict] = []
+    seen: set[str] = set()
+    for item in retrieved:
+        kp_id = item.get("kp_id")
+        if not kp_id or kp_id in seen:
+            continue
+        seen.add(kp_id)
+        references.append({
+            "kp_id": kp_id,
+            "title": item.get("title") or "",
+            "chapter": item.get("chapter"),
+            "category": item.get("category"),
+        })
+
     messages = _build_chat_messages(question, history, retrieved)
-    yield from chat_stream(messages, api_key=api_key)
+    yield ("references", references)
+    for token in chat_stream(messages, api_key=api_key):
+        yield ("token", token)
 
 
 def analyze_code_stream(

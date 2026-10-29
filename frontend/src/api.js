@@ -277,6 +277,28 @@ export async function submitTextAnswer(assignmentId, content) {
   return resp.json()
 }
 
+export async function gradeSubmission(id, payload) {
+  const resp = await fetch(`/api/submissions/${id}/grade`, {
+    method: 'PATCH',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  })
+  if (!resp.ok) throw new Error(await readError(resp))
+  return resp.json()
+}
+
+export async function classMastery(classId) {
+  const resp = await fetch(`/api/classes/${classId}/mastery`, { headers: authHeaders() })
+  if (!resp.ok) return { items: [] }
+  return resp.json()
+}
+
+export async function myMastery() {
+  const resp = await fetch('/api/mastery/me', { headers: authHeaders() })
+  if (!resp.ok) return { items: [] }
+  return resp.json()
+}
+
 // ==================== 个人资料 ====================
 export async function getProfile() {
   const resp = await fetch('/api/profile', { headers: authHeaders() })

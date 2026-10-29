@@ -365,3 +365,28 @@ body {
   padding: 12px 0;
   font-size: 13px;
 }
+
+/* 对话回答下方：本次参考的知识点 */
+.refs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.refs-label {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.ref {
+  font-size: 11px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  padding: 1px 8px;
+}

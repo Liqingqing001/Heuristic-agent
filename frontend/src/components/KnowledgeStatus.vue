@@ -3,6 +3,7 @@
     import { marked } from 'marked'
     import { ingestKnowledge } from '../api.js'
     import { state } from '../session.js'
+    import { toast } from '../toast.js'
 
     const API = '/api/knowledge'
 
@@ -89,12 +90,12 @@
             const result = await ingestKnowledge()
             await loadStats()
             if (result.status === 'error') {
-                alert('建库失败：' + result.message)
+                toast('建库失败：' + result.message, 'error', 6000)
             } else {
-                alert('建库完成：' + JSON.stringify(result.stats))
+                toast('建库完成：' + JSON.stringify(result.stats), 'success', 5000)
             }
         } catch (e) {
-            alert('建库失败：' + (e.message || e))
+            toast('建库失败：' + (e.message || e), 'error', 6000)
         }
         ingesting.value = false
     }

@@ -90,6 +90,9 @@ async function send() {
   if (doneInfo && doneInfo.conversation_id) {
     currentId.value = doneInfo.conversation_id
   }
+  if (doneInfo && doneInfo.references?.length) {
+    messages.value[aiIndex].references = doneInfo.references
+  }
 
   loading.value = false
   await loadConversations() // 刷新标题与排序
@@ -133,7 +136,15 @@ onMounted(async () => {
         </div>
         <div v-for="(m, i) in messages" :key="i" class="message" :class="m.role">
           <template v-if="m.role === 'user'">{{ m.content }}</template>
-          <div v-else v-html="renderMarkdown(m.content)"></div>
+          <template v-else>
+            <div v-html="renderMarkdown(m.content)"></div>
+            <div v-if="m.references?.length" class="refs">
+              <span class="refs-label">参考知识点</span>
+              <span v-for="ref in m.references" :key="ref.kp_id" class="ref">
+                {{ ref.kp_id }}<template v-if="ref.title"> · {{ ref.title }}</template>
+              </span>
+            </div>
+          </template>
         </div>
       </div>
 

@@ -2,14 +2,17 @@
 import { computed, onMounted, ref } from 'vue'
 import { marked } from 'marked'
 import {
+  classMastery,
   createAssignment,
   createClass,
   getOverview,
   getSubmission,
+  gradeSubmission,
   listAssignments,
   listClasses,
   listSubmissions,
 } from '../api.js'
+import { toast } from '../toast.js'
 
 const classes = ref([])
 const currentId = ref(null)
@@ -33,7 +36,13 @@ const newAssignment = ref({
 
 const submissions = ref([])
 const submissionsTitle = ref('')
+const submissionsAssignmentId = ref(null)
 const detail = ref(null)
+
+const mastery = ref([])
+const gradeTarget = ref(null)
+const gradeForm = ref({ score: '', feedback: '', returned: false })
+const grading = ref(false)
 
 const currentClass = computed(
   () => classes.value.find((item) => item.id === currentId.value) || null
@@ -58,9 +67,14 @@ async function selectClass(id) {
   overview.value = null
   submissions.value = []
   loading.value = true
-  const [items, stats] = await Promise.all([listAssignments(id), getOverview(id)])
+  const [items, stats, masteryData] = await Promise.all([
+    listAssignments(id),
+    getOverview(id),
+    classMastery(id),
+  ])
   assignments.value = items
   overview.value = stats
+  mastery.value = masteryData.items || []
   loading.value = false
 }
 
@@ -128,6 +142,7 @@ async function doCreateAssignment() {
 
 async function openSubmissions(assignment) {
   submissionsTitle.value = assignment.title
+  submissionsAssignmentId.value = assignment.id
   submissions.value = await listSubmissions(assignment.id)
 }
 
@@ -137,6 +152,41 @@ async function openDetail(item) {
 
 function closeDetail() {
   detail.value = null
+}
+
+function openGrade(item) {
+  gradeTarget.value = item
+  gradeForm.value = {
+    score: item.score ?? '',
+    feedback: item.feedback || '',
+    returned: false,
+  }
+}
+
+async function submitGrade() {
+  const score = Number(gradeForm.value.score)
+  if (Number.isNaN(score) || score < 0 || score > 100) {
+    toast('分数要在 0-100 之间', 'error')
+    return
+  }
+  grading.value = true
+  try {
+    await gradeSubmission(gradeTarget.value.id, {
+      score,
+      feedback: gradeForm.value.feedback,
+      returned: gradeForm.value.returned,
+    })
+    toast(gradeForm.value.returned ? '已退回，学生可以重做' : '批阅已保存', 'success')
+    gradeTarget.value = null
+    await selectClass(currentId.value)
+    if (submissionsAssignmentId.value) {
+      submissions.value = await listSubmissions(submissionsAssignmentId.value)
+    }
+  } catch (e) {
+    toast(e.message || '批阅失败', 'error')
+  } finally {
+    grading.value = false
+  }
 }
 
 async function copyCode() {
@@ -152,6 +202,16 @@ async function copyCode() {
 function formatTime(value) {
   if (!value) return '不限'
   return value.replace('T', ' ')
+}
+
+function statusText(status) {
+  const map = {
+    submitted: '已提交',
+    analyzed: '已诊断',
+    graded: '已批阅',
+    returned: '已退回',
+  }
+  return map[status] || status
 }
 
 const renderMarkdown = (text) => marked.parse(text || '')
@@ -256,6 +316,22 @@ onMounted(loadClasses)
         </div>
       </div>
 
+      <div class="card">
+        <h4>知识点掌握度（班级平均）</h4>
+        <div v-if="!mastery.length" class="empty small">
+          还没有诊断数据（学生提交作业后自动累计）
+        </div>
+        <div v-for="item in mastery.slice(0, 5)" :key="item.kp_id" class="progress-row">
+          <div class="progress-label">
+            <span><span class="kp-chip">{{ item.kp_id }}</span>{{ item.title || '未命名知识点' }}</span>
+            <span class="num">{{ item.avg_score }}</span>
+          </div>
+          <div class="bar">
+            <div class="fill mastery" :style="{ width: `${item.avg_score}%` }"></div>
+          </div>
+        </div>
+      </div>
+
       <div v-if="overview" class="card">
         <h4>学生进度</h4>
         <div v-if="!overview.students.length" class="empty small">还没有学生加入</div>
@@ -317,14 +393,20 @@ onMounted(loadClasses)
       <div v-if="submissions.length" class="card">
         <h4>「{{ submissionsTitle }}」的提交</h4>
         <table class="table">
-          <thead><tr><th>学生</th><th>时间</th><th>状态</th><th>诊断</th><th></th></tr></thead>
+          <thead>
+            <tr><th>学生</th><th>时间</th><th>状态</th><th>分数</th><th>诊断</th><th>操作</th></tr>
+          </thead>
           <tbody>
             <tr v-for="item in submissions" :key="item.id">
               <td>{{ item.display_name || item.username }}</td>
               <td>{{ formatTime(item.submitted_at) }}</td>
-              <td>{{ item.status }}</td>
+              <td>{{ statusText(item.status) }}</td>
+              <td>{{ item.score ?? '-' }}</td>
               <td class="diagnosis-cell">{{ item.diagnosis }}</td>
-              <td><button class="link" @click="openDetail(item)">查看</button></td>
+              <td class="actions-cell">
+                <button class="link" @click="openDetail(item)">查看</button>
+                <button class="link" @click="openGrade(item)">批阅</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -343,6 +425,42 @@ onMounted(loadClasses)
         </div>
         <pre class="code-block">{{ detail.content }}</pre>
         <div v-if="detail.ai_result" class="ai-box" v-html="renderMarkdown(detail.ai_result)"></div>
+      </div>
+    </div>
+
+    <div v-if="gradeTarget" class="mask" @click.self="gradeTarget = null">
+      <div class="modal small-modal">
+        <div class="modal-head">
+          <h3>批阅：{{ gradeTarget.display_name || gradeTarget.username }}</h3>
+          <button class="link" @click="gradeTarget = null">关闭</button>
+        </div>
+        <p class="sub">「{{ submissionsTitle }}」 · {{ formatTime(gradeTarget.submitted_at) }}</p>
+
+        <label class="field">
+          <span>分数（0-100）</span>
+          <input v-model="gradeForm.score" type="number" min="0" max="100" />
+        </label>
+
+        <label class="field">
+          <span>评语（会显示给学生）</span>
+          <textarea
+            v-model="gradeForm.feedback"
+            maxlength="500"
+            placeholder="指出问题、给下一步建议，最多 500 字…"
+          ></textarea>
+        </label>
+
+        <label class="check">
+          <input v-model="gradeForm.returned" type="checkbox" />
+          退回重做（学生可再次提交，当前分数会被清除）
+        </label>
+
+        <div class="modal-actions">
+          <button class="ghost" @click="gradeTarget = null">取消</button>
+          <button class="primary" :disabled="grading" @click="submitGrade">
+            {{ grading ? '保存中…' : '保存批阅' }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -739,6 +857,91 @@ onMounted(loadClasses)
   border-top: 1px solid #f1f5f9;
   margin-top: 12px;
   padding-top: 10px;
+}
+
+.small-modal {
+  width: 480px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.field input,
+.field textarea {
+  padding: 9px 11px;
+  border: 1px solid #dbe3ee;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.field textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: #3b82f6;
+  outline: none;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.primary {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  background: #3b82f6;
+  color: white;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.primary:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.ghost {
+  padding: 8px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  color: #475569;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.actions-cell {
+  white-space: nowrap;
+}
+
+.actions-cell .link + .link {
+  margin-left: 8px;
+}
+
+.fill.mastery {
+  background: linear-gradient(90deg, #34d399, #3b82f6);
 }
 
 @media (max-width: 820px) {

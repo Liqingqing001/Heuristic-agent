@@ -195,6 +195,7 @@ onMounted(loadClasses)
             <span :class="item.my_submission ? 'done' : 'todo'">
               {{ item.my_submission ? '已提交' : '待完成' }}
             </span>
+            <span v-if="item.is_overdue && !item.my_submission" class="overdue">已截止</span>
             <span class="due">{{ formatTime(item.due_at) }}</span>
           </div>
         </div>
@@ -213,6 +214,7 @@ onMounted(loadClasses)
             </div>
             <div class="meta">
               <span>截止：{{ formatTime(selected.due_at) }}</span>
+              <span v-if="selected.is_overdue" class="overdue">已截止</span>
               <span v-for="kp in selected.kp_ids" :key="kp" class="kp-chip">{{ kp }}</span>
             </div>
             <p v-if="selected.description" class="desc">{{ selected.description }}</p>
@@ -223,6 +225,21 @@ onMounted(loadClasses)
               <strong>我的提交</strong>
               <span>{{ formatTime(detail.submitted_at) }} · {{ detail.status }}</span>
             </div>
+
+            <div
+              v-if="detail.status === 'graded' || detail.status === 'returned'"
+              class="grade-box"
+              :class="detail.status"
+            >
+              <div class="grade-main">
+                <span>{{ detail.status === 'returned' ? '已退回重做' : '老师评阅' }}</span>
+                <strong>{{ detail.score ?? '-' }}</strong>
+                <span>分</span>
+              </div>
+              <p v-if="detail.feedback" class="grade-comment">{{ detail.feedback }}</p>
+              <p v-else class="grade-comment muted">老师没有留下评语</p>
+            </div>
+            <p v-else class="pending-grade">已提交，等待老师批阅</p>
 
             <div v-if="diagnosis" class="chips">
               <span v-for="item in diagnosis.error_types" :key="item" class="chip error">{{ item }}</span>
@@ -412,6 +429,17 @@ onMounted(loadClasses)
   color: #b45309;
 }
 
+.item-meta .overdue {
+  color: #b91c1c;
+  background: #fef2f2;
+  border-radius: 4px;
+  padding: 0 5px;
+}
+
+.overdue {
+  color: #b91c1c;
+}
+
 .due {
   margin-left: auto;
 }
@@ -475,6 +503,53 @@ onMounted(loadClasses)
   color: #475569;
   line-height: 1.7;
   margin: 12px 0 0;
+}
+
+.grade-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.grade-box.returned {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.grade-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.grade-main strong {
+  font-size: 22px;
+  color: #15803d;
+}
+
+.grade-box.returned .grade-main strong {
+  color: #b91c1c;
+}
+
+.grade-comment {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.grade-comment.muted {
+  color: #94a3b8;
+}
+
+.pending-grade {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 0 0 12px;
 }
 
 .submission {

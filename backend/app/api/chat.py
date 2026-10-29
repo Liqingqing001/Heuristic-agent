@@ -36,9 +36,12 @@ def _stream(question: str, conversation_id: int | None, user_id: int, api_key: s
         store.maybe_update_title(conversation_id, question)
 
         full_reply = ""
-        for token in answer_stream(question, history, api_key=api_key):
-            full_reply += token
-            yield _sse({"token": token})
+        for kind, payload in answer_stream(question, history, api_key=api_key):
+            if kind == "references":
+                yield _sse({"references": payload})
+            elif kind == "token":
+                full_reply += payload
+                yield _sse({"token": payload})
 
         store.add_message(conversation_id, "assistant", full_reply)
         yield _sse({"conversation_id": conversation_id, "done": True})

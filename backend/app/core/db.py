@@ -102,11 +102,25 @@ CREATE TABLE IF NOT EXISTS submissions (
     language TEXT NOT NULL DEFAULT 'cpp',
     status TEXT NOT NULL DEFAULT 'submitted',
     score REAL,
+    feedback TEXT NOT NULL DEFAULT '',
+    graded_at TEXT NOT NULL DEFAULT '',
+    graded_by INTEGER NOT NULL DEFAULT 0,
     ai_result TEXT NOT NULL DEFAULT '',
     diagnosis TEXT NOT NULL DEFAULT '',
     submitted_at TEXT NOT NULL,
     UNIQUE (assignment_id, user_id),
     FOREIGN KEY (assignment_id) REFERENCES assignments(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS kp_mastery (
+    user_id INTEGER NOT NULL,
+    kp_id TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    score REAL NOT NULL DEFAULT 50,
+    last_hint INTEGER,
+    last_severity TEXT,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (user_id, kp_id)
 );
 
 CREATE TABLE IF NOT EXISTS meta (
@@ -184,6 +198,14 @@ def init_db() -> dict:
         # 旧版本 code_analyses 没有结构化诊断
         if _ensure_column(conn, "code_analyses", "diagnosis", "TEXT NOT NULL DEFAULT ''"):
             result["added_columns"].append("code_analyses.diagnosis")
+        # 批阅相关字段
+        for column, ddl in (
+            ("feedback", "TEXT NOT NULL DEFAULT ''"),
+            ("graded_at", "TEXT NOT NULL DEFAULT ''"),
+            ("graded_by", "INTEGER NOT NULL DEFAULT 0"),
+        ):
+            if _ensure_column(conn, "submissions", column, ddl):
+                result["added_columns"].append(f"submissions.{column}")
 
         conn.commit()
         try:

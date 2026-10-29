@@ -31,6 +31,12 @@ class SubmitTextBody(BaseModel):
     content: str
 
 
+class GradeBody(BaseModel):
+    score: float
+    feedback: str = ""
+    returned: bool = False
+
+
 def _get_class_or_404(class_id: int) -> dict:
     cls = store.get_class(class_id)
     if not cls:
@@ -195,3 +201,47 @@ def get_submission(submission_id: int, user: dict = Depends(get_current_user)):
             raise HTTPException(403, "无权访问")
         _ensure_teacher_of(cls, user)
     return submission
+
+
+@router.patch("/submissions/{submission_id}/grade")
+def grade_submission(
+    submission_id: int,
+    body: GradeBody,
+    user: dict = Depends(get_current_user),
+):
+    submission = store.get_submission(submission_id)
+    if not submission:
+        raise HTTPException(404, "提交记录不存在")
+    assignment = store.get_assignment(submission["assignment_id"])
+    if not assignment:
+        raise HTTPException(404, "任务不存在")
+    cls = _get_class_or_404(assignment["class_id"])
+    _ensure_teacher_of(cls, user)
+
+    if not 0 <= body.score <= 100:
+        raise HTTPException(400, "分数必须在 0-100 之间")
+    if len(body.feedback) > 500:
+        raise HTTPException(400, "评语最多 500 字")
+
+    updated = store.grade_submission(
+        submission_id,
+        user["user_id"],
+        body.score,
+        body.feedback,
+        body.returned,
+    )
+    if not updated:
+        raise HTTPException(400, "批阅失败")
+    return updated
+
+
+@router.get("/classes/{class_id}/mastery")
+def class_mastery(class_id: int, user: dict = Depends(get_current_user)):
+    cls = _get_class_or_404(class_id)
+    _ensure_teacher_of(cls, user)
+    return {"items": store.class_mastery(class_id)}
+
+
+@router.get("/mastery/me")
+def my_mastery(user: dict = Depends(get_current_user)):
+    return {"items": store.mastery_for_user(user["user_id"])}
