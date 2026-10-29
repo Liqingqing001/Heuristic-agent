@@ -148,11 +148,15 @@ backend/
       kp/                           # 结构化知识点（带 kp_id）
   scripts/
     check_kp.py           # 知识点校验 + 覆盖矩阵
+    seed_demo.py          # 生成演示数据（8 个学生、多次提交、批阅）
+    leak_check.py         # 检查历史 AI 回复有没有泄露完整代码
 frontend/
   src/
     session.js            # 登录用户、个人密钥、当前任务
     api.js                # 接口封装（Token + X-LLM-Key + SSE）
-    App.vue               # 布局、角色页签、状态横幅
+    toast.js              # 全局提示
+    App.vue               # 左侧导航、角色页签、#/ 路由、状态横幅
+    style.css             # 全局样式（含对话参考知识点标签）
     components/
       AssistantPanel.vue # 学习助手：对话 / 代码诊断两种模式
       ChatPanel.vue       # 对话（回答下方展示参考知识点）
@@ -166,8 +170,6 @@ frontend/
       StatusBanner.vue    # 顶部状态横幅
       SettingsModal.vue   # 模型密钥设置
       ToastHost.vue       # 全局提示
-  scripts/
-    seed_demo.py          # 生成演示数据（8 个学生、多次提交、批阅）
 ```
 
 ---
@@ -204,6 +206,7 @@ frontend/
 2. **结构化诊断**：模型在回复末尾输出 `<<<DIAG {...} DIAG>>>`，后端剥离后解析成 `error_types / kp_ids / severity / hint_level_reached`，看板才能统计"错在哪、涉及哪个知识点、提示给到第几阶"。
 3. **知识点库**：`ds-章节-序号`，front matter 记录前置知识与难度，检索结果带 `kp_id`，是掌握度统计的基础。
 4. **教学闭环**：教师发任务 → 学生提交 → AI 诊断 → 教师看板，与「不泄题」的引导目标一致。
+5. **可验证**：`py scripts\leak_check.py` 扫描全部历史 AI 回复，统计"疑似完整代码"的条数与通过率（当前 17 条、0 命中、100%），可直接放进答辩材料。
 
 ---
 
