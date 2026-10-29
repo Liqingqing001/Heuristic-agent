@@ -8,6 +8,19 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+
+# ===== 前端 =====
+# 依赖目录（clone 后 npm install 重新生成，不要提交）
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ===== 本地数据（每人机器上各自生成） =====
+backend/data/*.db
+backend/data/*.db-wal
+backend/data/*.db-shm
+backend/data/vector_db/
+backend/data/.secret_key
 downloads/
 eggs/
 .eggs/
