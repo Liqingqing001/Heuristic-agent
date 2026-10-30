@@ -423,7 +423,7 @@ onMounted(loadClasses)
           </select>
           <input v-model="newAssignment.kp_ids" placeholder="关联知识点，逗号分隔，例如 ds-01-02, ds-01-03" />
           <div class="due-field">
-            <input v-model="newAssignment.due_at" placeholder="截止时间：2026-12-01 23:59（可留空）" />
+            <input v-model="newAssignment.due_at" placeholder="2026-12-01 23:59" />
             <span class="due-hint">格式：年-月-日 时:分</span>
           </div>
           <textarea v-model="newAssignment.description" placeholder="任务说明（可选）"></textarea>
@@ -743,7 +743,7 @@ onMounted(loadClasses)
 
 .form-grid {
   display: grid;
-  grid-template-columns: 1fr 180px;
+  grid-template-columns: 1fr 220px;
   gap: 10px;
 }
 
