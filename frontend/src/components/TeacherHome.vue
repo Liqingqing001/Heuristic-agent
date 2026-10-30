@@ -1,7 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { classMastery, getOverview, listClasses } from '../api.js'
-import { focusAssignment } from '../session.js'
 
 const emit = defineEmits(['goto'])
 
@@ -54,11 +53,6 @@ async function selectClass(id) {
 function formatTime(value) {
   if (!value) return '不限'
   return value.replace('T', ' ')
-}
-
-function jumpToGrading(item) {
-  focusAssignment(item.assignment_id, currentId.value)
-  emit('goto', 'workspace')
 }
 
 onMounted(load)
@@ -146,12 +140,7 @@ onMounted(load)
         <button class="link" @click="emit('goto', 'workspace')">去批阅 →</button>
       </div>
       <div v-if="!pending.length" class="empty small">没有待批阅的提交。</div>
-      <div
-        v-for="item in pending.slice(0, 5)"
-        :key="item.id"
-        class="row clickable"
-        @click="jumpToGrading(item)"
-      >
+      <div v-for="item in pending.slice(0, 5)" :key="item.id" class="row">
         <div>
           <div class="row-title">{{ item.assignment_title }}</div>
           <div class="row-meta">
@@ -159,7 +148,6 @@ onMounted(load)
             <span>{{ formatTime(item.submitted_at) }}</span>
           </div>
         </div>
-        <span class="badge warn">去批阅 →</span>
       </div>
     </section>
   </div>
@@ -360,25 +348,6 @@ onMounted(load)
   font-size: 11px;
   color: #94a3b8;
   margin-top: 3px;
-}
-
-.clickable {
-  cursor: pointer;
-}
-
-.clickable:hover {
-  background: #f8fafc;
-}
-
-.badge {
-  font-size: 11px;
-  padding: 2px 9px;
-  border-radius: 999px;
-}
-
-.badge.warn {
-  background: #fffbeb;
-  color: #b45309;
 }
 
 .primary {

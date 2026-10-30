@@ -9,8 +9,6 @@ export const state = reactive({
   user: null,
   activeAssignment: null,
   assistantMode: 'chat', // 'chat' | 'code'
-  pendingAssignmentId: null, // 教师首页跳转到班级管理时要自动打开的任务
-  pendingClassId: null,
   status: null,
   llmKey: '',
   remember: false,
@@ -58,10 +56,4 @@ export function setAssistantMode(mode) {
 
 export function clearAssignment() {
   state.activeAssignment = null
-}
-
-// 从教师首页跳转到班级管理时，告诉它要自动打开哪个任务的提交
-export function focusAssignment(assignmentId, classId = null) {
-  state.pendingAssignmentId = assignmentId
-  state.pendingClassId = classId
 }
