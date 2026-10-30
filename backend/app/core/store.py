@@ -959,6 +959,7 @@ def class_overview(class_id: int) -> dict:
                 "assignment_id": sub["assignment_id"],
                 "assignment_title": sub["assignment_title"],
                 "username": sub["username"],
+                "display_name": sub.get("display_name"),
                 "submitted_at": sub["submitted_at"],
                 "status": sub["status"],
                 "score": sub.get("score"),
