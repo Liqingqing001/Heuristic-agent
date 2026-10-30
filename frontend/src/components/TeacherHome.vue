@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { classMastery, getOverview, listClasses } from '../api.js'
-import GradeModal from './GradeModal.vue'
+import { focusAssignment } from '../session.js'
 
 const emit = defineEmits(['goto'])
 
@@ -10,7 +10,6 @@ const classes = ref([])
 const currentId = ref(null)
 const overview = ref(null)
 const mastery = ref([])
-const gradeTarget = ref(null)
 
 const currentClass = computed(
   () => classes.value.find((item) => item.id === currentId.value) || null
@@ -57,9 +56,9 @@ function formatTime(value) {
   return value.replace('T', ' ')
 }
 
-async function onGradeSaved() {
-  gradeTarget.value = null
-  if (currentId.value) await selectClass(currentId.value)
+function jumpToGrading(item) {
+  focusAssignment(item.assignment_id, currentId.value)
+  emit('goto', 'workspace')
 }
 
 onMounted(load)
@@ -147,24 +146,22 @@ onMounted(load)
         <button class="link" @click="emit('goto', 'workspace')">去批阅 →</button>
       </div>
       <div v-if="!pending.length" class="empty small">没有待批阅的提交。</div>
-      <div v-for="item in pending.slice(0, 5)" :key="item.id" class="row clickable" @click="gradeTarget = item">
+      <div
+        v-for="item in pending.slice(0, 5)"
+        :key="item.id"
+        class="row clickable"
+        @click="jumpToGrading(item)"
+      >
         <div>
           <div class="row-title">{{ item.assignment_title }}</div>
           <div class="row-meta">
-            <span>{{ item.username }}</span>
+            <span>{{ item.display_name || item.username }}</span>
             <span>{{ formatTime(item.submitted_at) }}</span>
           </div>
         </div>
-        <span class="badge warn">去批阅</span>
+        <span class="badge warn">去批阅 →</span>
       </div>
     </section>
-
-    <GradeModal
-      :target="gradeTarget"
-      :assignment-title="gradeTarget?.assignment_title || ''"
-      @close="gradeTarget = null"
-      @saved="onGradeSaved"
-    />
   </div>
 </template>
 

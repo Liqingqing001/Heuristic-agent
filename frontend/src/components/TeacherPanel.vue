@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import {
   classMastery,
   createAssignment,
@@ -17,6 +17,7 @@ import {
 } from '../api.js'
 import { toast } from '../toast.js'
 import { renderMarkdown } from '../markdown.js'
+import { state } from '../session.js'
 import GradeModal from './GradeModal.vue'
 
 const classes = ref([])
@@ -44,6 +45,7 @@ const editingId = ref(null)
 const submissions = ref([])
 const submissionsTitle = ref('')
 const submissionsAssignmentId = ref(null)
+const submissionsBox = ref(null)
 const detail = ref(null)
 
 const mastery = ref([])
@@ -266,7 +268,27 @@ function statusText(status) {
 
 
 
-onMounted(loadClasses)
+async function openPendingTarget() {
+  const pendingId = state.pendingAssignmentId
+  if (!pendingId) return
+  const pendingClassId = state.pendingClassId
+  state.pendingAssignmentId = null
+  state.pendingClassId = null
+
+  if (pendingClassId && pendingClassId !== currentId.value) {
+    await selectClass(pendingClassId)
+  }
+  const target = assignments.value.find((item) => item.id === pendingId)
+  if (!target) return
+  await openSubmissions(target)
+  await nextTick()
+  submissionsBox.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+onMounted(async () => {
+  await loadClasses()
+  await openPendingTarget()
+})
 </script>
 
 <template>
@@ -462,7 +484,7 @@ onMounted(loadClasses)
         </div>
       </div>
 
-      <div v-if="submissions.length" class="card">
+      <div v-if="submissions.length" ref="submissionsBox" class="card">
         <h4>「{{ submissionsTitle }}」的提交</h4>
         <table class="table">
           <thead>
