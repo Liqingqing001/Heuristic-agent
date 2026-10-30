@@ -1,17 +1,29 @@
 <#
-    Stop the dev servers started by start.ps1.
+    Stop everything started by start.ps1:
+    - the Edge app window (dedicated profile)
+    - backend / frontend processes and whatever still holds 8000 / 5173
 
     NOTE: keep this file ASCII-only (Windows PowerShell 5.1 reads .ps1 as ANSI).
 #>
 $ErrorActionPreference = "SilentlyContinue"
 
 $killed = @()
+$profile = Join-Path $env:TEMP "zhiyu-demo-profile"
 
-# 1) processes whose command line clearly belongs to this project
+# 1) Close the dedicated Edge app window
+$edges = Get-CimInstance Win32_Process -Filter "Name='msedge.exe'" |
+    Where-Object { $_.CommandLine -and $_.CommandLine -like "*zhiyu-demo-profile*" }
+foreach ($edge in $edges) {
+    taskkill /F /T /PID $edge.ProcessId 2>&1 | Out-Null
+    $killed += $edge.ProcessId
+}
+
+# 2) Backend / frontend processes of this project
 $targets = Get-CimInstance Win32_Process | Where-Object {
     $_.CommandLine -and (
         $_.CommandLine -like "*uvicorn app.main:app*" -or
-        ($_.CommandLine -like "*vite*" -and $_.CommandLine -like "*Heuristic-agent*")
+        ($_.CommandLine -like "*vite*" -and $_.CommandLine -like "*Heuristic-agent*") -or
+        ($_.CommandLine -like "*npm*run dev*" -and $_.CommandLine -like "*Heuristic-agent*")
     )
 }
 foreach ($process in $targets) {
@@ -19,9 +31,8 @@ foreach ($process in $targets) {
     $killed += $process.ProcessId
 }
 
-# 2) whichever process still holds the ports; retry a few times because uvicorn
-#    may spawn a worker that inherits the socket a moment later.
-for ($round = 0; $round -lt 4; $round++) {
+# 3) Whatever still holds the ports (retry: workers may inherit sockets)
+for ($round = 0; $round -lt 5; $round++) {
     Start-Sleep -Milliseconds 500
     foreach ($port in 8000, 5173) {
         $connections = Get-NetTCPConnection -LocalPort $port -State Listen
@@ -34,9 +45,8 @@ for ($round = 0; $round -lt 4; $round++) {
 
 $unique = $killed | Select-Object -Unique
 if ($unique.Count -gt 0) {
-    Write-Host ("Stopped processes: " + ($unique -join ", "))
+    Write-Host ("Stopped: " + ($unique -join ", "))
 } else {
-    Write-Host "No running service found."
+    Write-Host "Nothing was running."
 }
-Write-Host "Done."
-Start-Sleep -Seconds 1
+Write-Host "Done - all windows and services are closed."
