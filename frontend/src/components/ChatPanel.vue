@@ -10,6 +10,7 @@ import {
 } from '../api.js'
 import { chapterLabel } from '../kp.js'
 import { renderMarkdown } from '../markdown.js'
+import { toast } from '../toast.js'
 
 const conversations = ref([])
 const currentId = ref(null)
@@ -56,12 +57,18 @@ async function switchConversation(id) {
 }
 
 async function removeConversation(id) {
-  await deleteConversation(id)
-  if (currentId.value === id) {
-    currentId.value = null
-    messages.value = []
+  if (!confirm('确定删除这个会话吗？聊天记录会一起删除。')) return
+  try {
+    await deleteConversation(id)
+    if (currentId.value === id) {
+      currentId.value = null
+      messages.value = []
+    }
+    await loadConversations()
+    toast('会话已删除', 'success')
+  } catch (e) {
+    toast('删除失败：' + (e.message || e), 'error')
   }
-  await loadConversations()
 }
 
 async function send() {

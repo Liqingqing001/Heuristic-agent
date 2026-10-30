@@ -138,9 +138,21 @@ def maybe_update_title(conversation_id: int, question: str) -> None:
 
 
 def delete_conversation(conversation_id: int, user_id: int) -> None:
+    """删除会话及其消息。
+
+    注意：早期版本的 messages 表没有 ON DELETE CASCADE，这里显式先删消息，
+    否则删除父记录会触发外键约束错误。
+    """
     _ensure()
     conn = get_conn()
     try:
+        row = conn.execute(
+            "SELECT id FROM conversations WHERE id = ? AND user_id = ?",
+            (conversation_id, user_id),
+        ).fetchone()
+        if not row:
+            return
+        conn.execute("DELETE FROM messages WHERE conversation_id = ?", (conversation_id,))
         conn.execute(
             "DELETE FROM conversations WHERE id = ? AND user_id = ?",
             (conversation_id, user_id),

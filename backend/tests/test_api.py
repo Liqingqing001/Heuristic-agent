@@ -180,6 +180,29 @@ def test_closed_assignment_blocks_submission(client):
     assert "截止" in response.json()["detail"]
 
 
+def test_delete_conversation_with_messages(client):
+    """回归：早期 messages 表没有级联删除，删会话会 500。"""
+    from app.core import store
+
+    token, user = register(client, "student", "s_conv")
+    conversation = store.create_conversation(user["user_id"], "测试会话")
+    store.add_message(conversation["id"], "user", "你好")
+    store.add_message(conversation["id"], "assistant", "你好，有什么问题？")
+
+    response = client.delete(
+        f"/api/conversations/{conversation['id']}", headers=auth(token)
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "ok"
+
+    # 会话和消息都没了
+    response = client.get("/api/conversations", headers=auth(token))
+    assert all(item["id"] != conversation["id"] for item in response.json())
+    assert client.get(
+        f"/api/conversations/{conversation['id']}/messages", headers=auth(token)
+    ).status_code == 403
+
+
 def test_profile_and_password(client):
     token, user = register(client, "student", "s_profile")
     response = client.patch(

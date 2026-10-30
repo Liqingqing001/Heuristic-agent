@@ -10,6 +10,7 @@
     import { clearAssignment, state } from '../session.js'
     import { chapterLabel } from '../kp.js'
     import { renderMarkdown } from '../markdown.js'
+    import { toast } from '../toast.js'
     import CodeEditor from './CodeEditor.vue'
 
     // 表单状态
@@ -81,9 +82,14 @@
 
     async function removeSession(id) {
         if (!confirm('确定删除这条剖析记录吗？')) return
-        await deleteCodeAnalysis(id)
-        if (currentId.value === id) newSession()
-        await loadHistory()
+        try {
+            await deleteCodeAnalysis(id)
+            if (currentId.value === id) newSession()
+            await loadHistory()
+            toast('记录已删除', 'success')
+        } catch (e) {
+            toast('删除失败：' + (e.message || e), 'error')
+        }
     }
 
     // ---- Markdown 与高亮 ----

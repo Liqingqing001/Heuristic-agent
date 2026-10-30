@@ -164,6 +164,7 @@ export async function deleteConversation(id) {
     headers: authHeaders(),
   })
   if (handle401(resp)) return null
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
@@ -195,6 +196,7 @@ export async function deleteCodeAnalysis(id) {
     headers: authHeaders(),
   })
   if (handle401(resp)) return null
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
