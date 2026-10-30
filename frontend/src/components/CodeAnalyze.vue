@@ -1,6 +1,5 @@
 <script setup>
     import { computed, ref, nextTick, onMounted } from 'vue'
-    import { marked } from 'marked'
     import hljs from 'highlight.js'
     import {
         streamAnalyze,
@@ -10,6 +9,8 @@
     } from '../api.js'
     import { clearAssignment, state } from '../session.js'
     import { chapterLabel } from '../kp.js'
+    import { renderMarkdown } from '../markdown.js'
+    import CodeEditor from './CodeEditor.vue'
 
     // 表单状态
     const code = ref('')
@@ -86,8 +87,6 @@
     }
 
     // ---- Markdown 与高亮 ----
-    const renderMarkdown = (text) => marked.parse(text || '')
-
     function highlight() {
         if (!resultBox.value) return
         resultBox.value.querySelectorAll('pre code').forEach((b) => {
@@ -183,7 +182,7 @@
             </div>
 
             <div class="code-form">
-                <textarea v-model="code" placeholder="粘贴你的 C/C++ 代码…"></textarea>
+                <CodeEditor v-model="code" />
 
                 <div class="quick-actions">
                     <button v-for="action in quickActions"

@@ -8,12 +8,14 @@
 """
 from __future__ import annotations
 
+import os
 import sqlite3
 from pathlib import Path
 
 from app.config import DATA_DIR
 
-DB_PATH = DATA_DIR / "app.db"
+# 测试时可用 APP_DB_PATH 指向临时库，避免污染开发数据
+DB_PATH = Path(os.getenv("APP_DB_PATH", str(DATA_DIR / "app.db")))
 LEGACY_CHAT_DB = DATA_DIR / "chat.db"
 
 _SCHEMA = """
@@ -89,6 +91,7 @@ CREATE TABLE IF NOT EXISTS assignments (
     type TEXT NOT NULL DEFAULT 'code',
     kp_ids TEXT NOT NULL DEFAULT '',
     due_at TEXT,
+    allow_late INTEGER NOT NULL DEFAULT 1,
     created_by INTEGER NOT NULL,
     created_at TEXT NOT NULL,
     FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
@@ -206,6 +209,9 @@ def init_db() -> dict:
         ):
             if _ensure_column(conn, "submissions", column, ddl):
                 result["added_columns"].append(f"submissions.{column}")
+        # 任务是否允许逾期提交（默认允许，保持旧行为）
+        if _ensure_column(conn, "assignments", "allow_late", "INTEGER NOT NULL DEFAULT 1"):
+            result["added_columns"].append("assignments.allow_late")
 
         conn.commit()
         try:

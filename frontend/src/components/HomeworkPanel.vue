@@ -1,6 +1,5 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { marked } from 'marked'
 import {
   getSubmission,
   joinClass,
@@ -9,6 +8,7 @@ import {
   submitTextAnswer,
 } from '../api.js'
 import { chapterLabel } from '../kp.js'
+import { renderMarkdown } from '../markdown.js'
 
 const emit = defineEmits(['start-assignment'])
 
@@ -33,6 +33,9 @@ const currentClass = computed(
 )
 const selected = computed(
   () => assignments.value.find((item) => item.id === selectedId.value) || null
+)
+const isClosed = computed(
+  () => !!selected.value && selected.value.is_overdue && !selected.value.allow_late
 )
 
 const filtered = computed(() => {
@@ -138,8 +141,6 @@ function formatTime(value) {
   return value.replace('T', ' ')
 }
 
-const renderMarkdown = (text) => marked.parse(text || '')
-
 onMounted(loadClasses)
 </script>
 
@@ -215,7 +216,9 @@ onMounted(loadClasses)
             </div>
             <div class="meta">
               <span>截止：{{ formatTime(selected.due_at) }}</span>
-              <span v-if="selected.is_overdue" class="overdue">已截止</span>
+              <span v-if="selected.is_overdue" class="overdue">
+                {{ selected.allow_late ? '已截止（仍可提交）' : '已截止，不可提交' }}
+              </span>
               <span v-for="kp in selected.kp_ids" :key="kp" class="kp-chip">
                 {{ selected.kp_titles?.[kp] || chapterLabel(kp) }}
               </span>
@@ -260,11 +263,12 @@ onMounted(loadClasses)
               <pre>{{ detail.content }}</pre>
             </details>
 
-            <div v-if="selected.type === 'code'" class="actions">
+            <div v-if="selected.type === 'code' && !isClosed" class="actions">
               <button class="primary" @click="redo">重新提交</button>
             </div>
+            <p v-else-if="isClosed" class="closed-tip">任务已截止，不再接受提交。</p>
 
-            <div v-else class="actions answer-box">
+            <div v-else-if="!isClosed" class="actions answer-box">
               <textarea v-model="answer" placeholder="修改后可以重新提交…"></textarea>
               <button class="primary" :disabled="submitting" @click="submitText">
                 {{ submitting ? '提交中…' : '重新提交' }}
@@ -273,15 +277,18 @@ onMounted(loadClasses)
           </div>
 
           <div v-else class="submission empty-block">
-            <p>还没有提交这个任务。</p>
-            <template v-if="selected.type === 'code'">
-              <button class="primary" @click="redo">去完成</button>
-            </template>
+            <p v-if="isClosed">这个任务已经截止，不能再提交了。</p>
             <template v-else>
-              <textarea v-model="answer" placeholder="写下你的答案…"></textarea>
-              <button class="primary" :disabled="submitting" @click="submitText">
-                {{ submitting ? '提交中…' : '提交答案' }}
-              </button>
+              <p>还没有提交这个任务。</p>
+              <template v-if="selected.type === 'code'">
+                <button class="primary" @click="redo">去完成</button>
+              </template>
+              <template v-else>
+                <textarea v-model="answer" placeholder="写下你的答案…"></textarea>
+                <button class="primary" :disabled="submitting" @click="submitText">
+                  {{ submitting ? '提交中…' : '提交答案' }}
+                </button>
+              </template>
             </template>
           </div>
         </template>
@@ -553,6 +560,15 @@ onMounted(loadClasses)
   font-size: 12px;
   color: #94a3b8;
   margin: 0 0 12px;
+}
+
+.closed-tip {
+  font-size: 12px;
+  color: #b91c1c;
+  background: #fef2f2;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin: 10px 0 0;
 }
 
 .submission {

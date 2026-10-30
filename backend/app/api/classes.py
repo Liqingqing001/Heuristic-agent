@@ -1,7 +1,12 @@
 """班级、任务、提交与学情看板接口。"""
 from __future__ import annotations
 
+import csv
+import io
+from urllib.parse import quote
+
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from app.core import store
@@ -25,6 +30,16 @@ class CreateAssignmentBody(BaseModel):
     type: str = "code"
     kp_ids: list[str] = []
     due_at: str | None = None
+    allow_late: bool = True
+
+
+class UpdateAssignmentBody(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    type: str | None = None
+    kp_ids: list[str] | None = None
+    due_at: str | None = None
+    allow_late: bool | None = None
 
 
 class SubmitTextBody(BaseModel):
@@ -130,6 +145,88 @@ def create_assignment(
         kp_ids=body.kp_ids,
         due_at=body.due_at,
         created_by=user["user_id"],
+        allow_late=1 if body.allow_late else 0,
+    )
+
+
+@router.patch("/assignments/{assignment_id}")
+def update_assignment(
+    assignment_id: int,
+    body: UpdateAssignmentBody,
+    user: dict = Depends(get_current_user),
+):
+    assignment = store.get_assignment(assignment_id)
+    if not assignment:
+        raise HTTPException(404, "任务不存在")
+    cls = _get_class_or_404(assignment["class_id"])
+    _ensure_teacher_of(cls, user)
+
+    data = body.model_dump(exclude_unset=True)
+    if "title" in data and not (data["title"] or "").strip():
+        raise HTTPException(400, "任务标题不能为空")
+    if "type" in data and data["type"] not in ("code", "question"):
+        raise HTTPException(400, "任务类型只能是 code 或 question")
+
+    return store.update_assignment(assignment_id, data)
+
+
+@router.delete("/assignments/{assignment_id}")
+def delete_assignment(assignment_id: int, user: dict = Depends(get_current_user)):
+    assignment = store.get_assignment(assignment_id)
+    if not assignment:
+        raise HTTPException(404, "任务不存在")
+    cls = _get_class_or_404(assignment["class_id"])
+    _ensure_teacher_of(cls, user)
+    store.delete_assignment(assignment_id)
+    return {"status": "ok"}
+
+
+@router.get("/classes/{class_id}/students/{user_id}")
+def student_detail(class_id: int, user_id: int, user: dict = Depends(get_current_user)):
+    cls = _get_class_or_404(class_id)
+    _ensure_teacher_of(cls, user)
+    detail = store.student_detail(class_id, user_id)
+    if not detail:
+        raise HTTPException(404, "学生不在该班级")
+    return detail
+
+
+@router.get("/classes/{class_id}/export.csv")
+def export_scores(class_id: int, user: dict = Depends(get_current_user)):
+    """导出成绩单 CSV（Excel 可直接打开）。"""
+    cls = _get_class_or_404(class_id)
+    _ensure_teacher_of(cls, user)
+
+    rows = store.class_export_rows(class_id)
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow([
+        "学号/账号", "姓名", "任务", "类型", "状态", "分数", "评语", "提交时间",
+    ])
+    status_text = {
+        "submitted": "已提交",
+        "analyzed": "已诊断",
+        "graded": "已批阅",
+        "returned": "已退回",
+    }
+    for row in rows:
+        writer.writerow([
+            row.get("username", ""),
+            row.get("display_name") or row.get("real_name") or "",
+            row.get("assignment", ""),
+            "代码" if row.get("type") == "code" else "问答",
+            status_text.get(row.get("status"), row.get("status") or ""),
+            "" if row.get("score") is None else row.get("score"),
+            (row.get("feedback") or "").replace("\n", " "),
+            (row.get("submitted_at") or "").replace("T", " "),
+        ])
+
+    filename = quote(f"{cls['name']}-成绩单.csv")
+    body = "\ufeff" + buffer.getvalue()
+    return Response(
+        content=body,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{filename}"},
     )
 
 
@@ -174,6 +271,8 @@ def submit_text(
         raise HTTPException(403, "你不在该任务所属的班级里")
     if assignment["type"] != "question":
         raise HTTPException(400, "该任务是代码类任务，请到代码剖析页提交")
+    if store.assignment_closed(assignment):
+        raise HTTPException(400, "任务已截止，不接受提交")
     content = body.content.strip()
     if not content:
         raise HTTPException(400, "回答不能为空")

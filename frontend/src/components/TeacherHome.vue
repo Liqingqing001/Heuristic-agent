@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { classMastery, getOverview, listClasses } from '../api.js'
+import GradeModal from './GradeModal.vue'
 
 const emit = defineEmits(['goto'])
 
@@ -9,6 +10,7 @@ const classes = ref([])
 const currentId = ref(null)
 const overview = ref(null)
 const mastery = ref([])
+const gradeTarget = ref(null)
 
 const currentClass = computed(
   () => classes.value.find((item) => item.id === currentId.value) || null
@@ -53,6 +55,11 @@ async function selectClass(id) {
 function formatTime(value) {
   if (!value) return '不限'
   return value.replace('T', ' ')
+}
+
+async function onGradeSaved() {
+  gradeTarget.value = null
+  if (currentId.value) await selectClass(currentId.value)
 }
 
 onMounted(load)
@@ -140,7 +147,7 @@ onMounted(load)
         <button class="link" @click="emit('goto', 'workspace')">去批阅 →</button>
       </div>
       <div v-if="!pending.length" class="empty small">没有待批阅的提交。</div>
-      <div v-for="item in pending.slice(0, 5)" :key="item.id" class="row">
+      <div v-for="item in pending.slice(0, 5)" :key="item.id" class="row clickable" @click="gradeTarget = item">
         <div>
           <div class="row-title">{{ item.assignment_title }}</div>
           <div class="row-meta">
@@ -148,9 +155,16 @@ onMounted(load)
             <span>{{ formatTime(item.submitted_at) }}</span>
           </div>
         </div>
-        <span class="badge warn">待批阅</span>
+        <span class="badge warn">去批阅</span>
       </div>
     </section>
+
+    <GradeModal
+      :target="gradeTarget"
+      :assignment-title="gradeTarget?.assignment_title || ''"
+      @close="gradeTarget = null"
+      @saved="onGradeSaved"
+    />
   </div>
 </template>
 
@@ -349,6 +363,14 @@ onMounted(load)
   font-size: 11px;
   color: #94a3b8;
   margin-top: 3px;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  background: #f8fafc;
 }
 
 .badge {

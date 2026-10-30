@@ -254,6 +254,13 @@ def _generate_class_code(conn: sqlite3.Connection) -> str:
     raise RuntimeError("班级邀请码生成失败，请重试")
 
 
+def assignment_closed(assignment: dict | None) -> bool:
+    """任务是否已截止且不允许迟交。"""
+    if not assignment:
+        return False
+    return _is_overdue(assignment.get("due_at")) and not int(assignment.get("allow_late", 1) or 0)
+
+
 def create_class(teacher_id: int, name: str, term: str = "") -> dict:
     _ensure()
     now = _now()
@@ -396,14 +403,15 @@ def create_assignment(
     kp_ids: list[str] | None = None,
     due_at: str | None = None,
     created_by: int = 0,
+    allow_late: int = 1,
 ) -> dict:
     _ensure()
     now = _now()
     conn = get_conn()
     try:
         cur = conn.execute(
-            "INSERT INTO assignments (class_id, title, description, type, kp_ids, due_at, created_by, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO assignments (class_id, title, description, type, kp_ids, due_at, allow_late, created_by, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 class_id,
                 title,
@@ -411,6 +419,7 @@ def create_assignment(
                 type_,
                 ",".join(kp_ids or []),
                 due_at,
+                1 if allow_late else 0,
                 created_by,
                 now,
             ),
@@ -424,6 +433,7 @@ def create_assignment(
             "type": type_,
             "kp_ids": kp_ids or [],
             "due_at": due_at,
+            "allow_late": 1 if allow_late else 0,
             "created_at": now,
         }
     finally:
@@ -481,6 +491,97 @@ def get_assignment(assignment_id: int) -> dict | None:
             kp_id: (titles.get(kp_id, {}) or {}).get("title", "") for kp_id in item["kp_ids"]
         }
         return item
+    finally:
+        conn.close()
+
+
+def update_assignment(assignment_id: int, fields: dict) -> dict | None:
+    """教师编辑任务：标题、说明、类型、知识点、截止时间、是否允许迟交。"""
+    _ensure()
+    allowed = {"title", "description", "type", "kp_ids", "due_at", "allow_late"}
+    updates = {}
+    for key, value in fields.items():
+        if key not in allowed:
+            continue
+        if key == "kp_ids":
+            updates[key] = ",".join(value or [])
+        elif key == "allow_late":
+            updates[key] = 1 if value else 0
+        else:
+            updates[key] = value
+
+    if updates:
+        assignments = ", ".join(f"{key} = ?" for key in updates)
+        conn = get_conn()
+        try:
+            conn.execute(
+                f"UPDATE assignments SET {assignments} WHERE id = ?",
+                (*list(updates.values()), assignment_id),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+    return get_assignment(assignment_id)
+
+
+def delete_assignment(assignment_id: int) -> None:
+    """删除任务（提交记录通过外键级联删除）。"""
+    _ensure()
+    conn = get_conn()
+    try:
+        conn.execute("DELETE FROM assignments WHERE id = ?", (assignment_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def student_detail(class_id: int, user_id: int) -> dict | None:
+    """教师查看某个学生的档案：资料 + 本班提交记录 + 知识点掌握度。"""
+    _ensure()
+    if not is_member(class_id, user_id):
+        return None
+    conn = get_conn()
+    try:
+        profile = conn.execute(
+            "SELECT id, username, display_name, real_name, school, department, major, "
+            "gender, enrollment_year, bio, created_at FROM users WHERE id = ?",
+            (user_id,),
+        ).fetchone()
+        if not profile:
+            return None
+        submissions = conn.execute(
+            "SELECT s.id, s.assignment_id, s.status, s.score, s.feedback, s.submitted_at, "
+            "       s.diagnosis, a.title AS assignment_title, a.type AS assignment_type "
+            "FROM submissions s JOIN assignments a ON a.id = s.assignment_id "
+            "WHERE a.class_id = ? AND s.user_id = ? ORDER BY s.submitted_at DESC",
+            (class_id, user_id),
+        ).fetchall()
+    finally:
+        conn.close()
+
+    mastery = [item for item in mastery_for_user(user_id)]
+    return {
+        "profile": dict(profile),
+        "submissions": [dict(row) for row in submissions],
+        "mastery": mastery,
+    }
+
+
+def class_export_rows(class_id: int) -> list[dict]:
+    """成绩单数据（CSV 导出用）。"""
+    _ensure()
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT u.username, u.display_name, u.real_name, a.title AS assignment, a.type, "
+            "       s.status, s.score, s.feedback, s.submitted_at "
+            "FROM submissions s "
+            "JOIN assignments a ON a.id = s.assignment_id "
+            "JOIN users u ON u.id = s.user_id "
+            "WHERE a.class_id = ? ORDER BY u.username, a.id",
+            (class_id,),
+        ).fetchall()
+        return _rows(rows)
     finally:
         conn.close()
 

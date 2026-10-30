@@ -1,18 +1,23 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { marked } from 'marked'
 import {
   classMastery,
   createAssignment,
   createClass,
+  deleteAssignment,
+  exportScores,
   getOverview,
+  getStudentDetail,
   getSubmission,
   gradeSubmission,
   listAssignments,
   listClasses,
   listSubmissions,
+  updateAssignment,
 } from '../api.js'
 import { toast } from '../toast.js'
+import { renderMarkdown } from '../markdown.js'
+import GradeModal from './GradeModal.vue'
 
 const classes = ref([])
 const currentId = ref(null)
@@ -32,7 +37,9 @@ const newAssignment = ref({
   type: 'code',
   kp_ids: '',
   due_at: '',
+  allow_late: true,
 })
+const editingId = ref(null)
 
 const submissions = ref([])
 const submissionsTitle = ref('')
@@ -41,8 +48,8 @@ const detail = ref(null)
 
 const mastery = ref([])
 const gradeTarget = ref(null)
-const gradeForm = ref({ score: '', feedback: '', returned: false })
-const grading = ref(false)
+const studentDetail = ref(null)
+const studentLoading = ref(false)
 
 const currentClass = computed(
   () => classes.value.find((item) => item.id === currentId.value) || null
@@ -109,6 +116,31 @@ function normalizeDue(value) {
   return `${year}-${month}-${day}T${hour.padStart(2, '0')}:${minute}`
 }
 
+function resetAssignmentForm() {
+  editingId.value = null
+  newAssignment.value = {
+    title: '',
+    description: '',
+    type: 'code',
+    kp_ids: '',
+    due_at: '',
+    allow_late: true,
+  }
+}
+
+function startEdit(assignment) {
+  editingId.value = assignment.id
+  newAssignment.value = {
+    title: assignment.title,
+    description: assignment.description || '',
+    type: assignment.type,
+    kp_ids: (assignment.kp_ids || []).join(', '),
+    due_at: (assignment.due_at || '').replace('T', ' '),
+    allow_late: !!assignment.allow_late,
+  }
+  message.value = '正在编辑任务，改完点「保存修改」'
+}
+
 async function doCreateAssignment() {
   error.value = ''
   const due = normalizeDue(newAssignment.value.due_at)
@@ -125,18 +157,39 @@ async function doCreateAssignment() {
       .map((item) => item.trim())
       .filter(Boolean),
     due_at: due,
+    allow_late: !!newAssignment.value.allow_late,
   }
   if (!payload.title) {
     error.value = '任务标题不能为空'
     return
   }
   try {
-    await createAssignment(currentId.value, payload)
-    newAssignment.value = { title: '', description: '', type: 'code', kp_ids: '', due_at: '' }
+    if (editingId.value) {
+      await updateAssignment(editingId.value, payload)
+      toast('任务已更新', 'success')
+    } else {
+      await createAssignment(currentId.value, payload)
+      toast('任务已发布', 'success')
+    }
+    resetAssignmentForm()
     await selectClass(currentId.value)
-    message.value = '任务已发布'
   } catch (e) {
-    error.value = e.message || '发布失败'
+    error.value = e.message || '保存失败'
+  }
+}
+
+async function removeAssignment(assignment) {
+  if (!confirm(`确定删除任务「${assignment.title}」？该任务的提交记录也会一起删除。`)) return
+  try {
+    await deleteAssignment(assignment.id)
+    toast('任务已删除', 'success')
+    if (submissionsAssignmentId.value === assignment.id) {
+      submissions.value = []
+      submissionsAssignmentId.value = null
+    }
+    await selectClass(currentId.value)
+  } catch (e) {
+    toast(e.message || '删除失败', 'error')
   }
 }
 
@@ -156,36 +209,33 @@ function closeDetail() {
 
 function openGrade(item) {
   gradeTarget.value = item
-  gradeForm.value = {
-    score: item.score ?? '',
-    feedback: item.feedback || '',
-    returned: false,
+}
+
+async function onGradeSaved() {
+  gradeTarget.value = null
+  await selectClass(currentId.value)
+  if (submissionsAssignmentId.value) {
+    submissions.value = await listSubmissions(submissionsAssignmentId.value)
   }
 }
 
-async function submitGrade() {
-  const score = Number(gradeForm.value.score)
-  if (Number.isNaN(score) || score < 0 || score > 100) {
-    toast('分数要在 0-100 之间', 'error')
-    return
-  }
-  grading.value = true
+async function openStudent(student) {
+  studentLoading.value = true
   try {
-    await gradeSubmission(gradeTarget.value.id, {
-      score,
-      feedback: gradeForm.value.feedback,
-      returned: gradeForm.value.returned,
-    })
-    toast(gradeForm.value.returned ? '已退回，学生可以重做' : '批阅已保存', 'success')
-    gradeTarget.value = null
-    await selectClass(currentId.value)
-    if (submissionsAssignmentId.value) {
-      submissions.value = await listSubmissions(submissionsAssignmentId.value)
-    }
+    studentDetail.value = await getStudentDetail(currentId.value, student.user_id)
   } catch (e) {
-    toast(e.message || '批阅失败', 'error')
+    toast(e.message || '加载学生信息失败', 'error')
   } finally {
-    grading.value = false
+    studentLoading.value = false
+  }
+}
+
+async function doExport() {
+  try {
+    await exportScores(currentId.value)
+    toast('成绩单已开始下载（Excel 可直接打开）', 'success')
+  } catch (e) {
+    toast(e.message || '导出失败', 'error')
   }
 }
 
@@ -214,7 +264,7 @@ function statusText(status) {
   return map[status] || status
 }
 
-const renderMarkdown = (text) => marked.parse(text || '')
+
 
 onMounted(loadClasses)
 </script>
@@ -258,9 +308,12 @@ onMounted(loadClasses)
           <h3>{{ currentClass.name }}</h3>
           <span class="sub">{{ currentClass.term || '未填写学期' }} · {{ currentClass.member_count }} 名学生</span>
         </div>
-        <button class="invite" @click="copyCode">
-          邀请码 <strong>{{ currentClass.code }}</strong>（点击复制）
-        </button>
+        <div class="head-actions">
+          <button class="ghost" @click="doExport">导出成绩 CSV</button>
+          <button class="invite" @click="copyCode">
+            邀请码 <strong>{{ currentClass.code }}</strong>（点击复制）
+          </button>
+        </div>
       </div>
 
       <!-- 学情看板 -->
@@ -340,7 +393,12 @@ onMounted(loadClasses)
             <tr><th>学生</th><th>提交</th><th>进度</th><th>未交任务</th></tr>
           </thead>
           <tbody>
-            <tr v-for="student in overview.students" :key="student.user_id">
+            <tr
+              v-for="student in overview.students"
+              :key="student.user_id"
+              class="clickable"
+              @click="openStudent(student)"
+            >
               <td>{{ student.display_name || student.username }}</td>
               <td>{{ student.submitted }}/{{ student.total }}</td>
               <td>
@@ -369,7 +427,17 @@ onMounted(loadClasses)
             <span class="due-hint">格式：年-月-日 时:分</span>
           </div>
           <textarea v-model="newAssignment.description" placeholder="任务说明（可选）"></textarea>
-          <button class="primary" @click="doCreateAssignment">发布</button>
+          <label class="late-check">
+            <input v-model="newAssignment.allow_late" type="checkbox" />
+            允许截止后提交（不勾选则到期后禁止提交）
+          </label>
+          <div class="form-actions">
+            <button class="primary" @click="doCreateAssignment">
+              {{ editingId ? '保存修改' : '发布' }}
+            </button>
+            <button v-if="editingId" class="ghost" @click="resetAssignmentForm">取消编辑</button>
+            <span v-if="editingId" class="editing-hint">正在编辑：{{ newAssignment.title }}</span>
+          </div>
         </div>
       </div>
 
@@ -384,9 +452,13 @@ onMounted(loadClasses)
             <span class="sub">截止 {{ formatTime(item.due_at) }}</span>
             <span v-for="kp in item.kp_ids" :key="kp" class="kp-chip">{{ kp }}</span>
           </div>
-          <button class="ghost" @click="openSubmissions(item)">
-            查看提交（{{ item.submitted_count }}）
-          </button>
+          <div class="row-actions">
+            <button class="ghost" @click="openSubmissions(item)">
+              查看提交（{{ item.submitted_count }}）
+            </button>
+            <button class="link" @click="startEdit(item)">编辑</button>
+            <button class="link danger" @click="removeAssignment(item)">删除</button>
+          </div>
         </div>
       </div>
 
@@ -428,39 +500,54 @@ onMounted(loadClasses)
       </div>
     </div>
 
-    <div v-if="gradeTarget" class="mask" @click.self="gradeTarget = null">
-      <div class="modal small-modal">
+    <GradeModal
+      :target="gradeTarget"
+      :assignment-title="submissionsTitle"
+      @close="gradeTarget = null"
+      @saved="onGradeSaved"
+    />
+
+    <div v-if="studentDetail" class="mask" @click.self="studentDetail = null">
+      <div class="modal">
         <div class="modal-head">
-          <h3>批阅：{{ gradeTarget.display_name || gradeTarget.username }}</h3>
-          <button class="link" @click="gradeTarget = null">关闭</button>
+          <h3>
+            {{ studentDetail.profile.display_name || studentDetail.profile.username }}
+            <span class="sub-inline">{{ studentDetail.profile.real_name || '' }}</span>
+          </h3>
+          <button class="link" @click="studentDetail = null">关闭</button>
         </div>
-        <p class="sub">「{{ submissionsTitle }}」 · {{ formatTime(gradeTarget.submitted_at) }}</p>
+        <p class="sub">
+          {{ studentDetail.profile.username }}
+          <template v-if="studentDetail.profile.major"> · {{ studentDetail.profile.major }}</template>
+          <template v-if="studentDetail.profile.enrollment_year"> · {{ studentDetail.profile.enrollment_year }} 级</template>
+        </p>
 
-        <label class="field">
-          <span>分数（0-100）</span>
-          <input v-model="gradeForm.score" type="number" min="0" max="100" />
-        </label>
-
-        <label class="field">
-          <span>评语（会显示给学生）</span>
-          <textarea
-            v-model="gradeForm.feedback"
-            maxlength="500"
-            placeholder="指出问题、给下一步建议，最多 500 字…"
-          ></textarea>
-        </label>
-
-        <label class="check">
-          <input v-model="gradeForm.returned" type="checkbox" />
-          退回重做（学生可再次提交，当前分数会被清除）
-        </label>
-
-        <div class="modal-actions">
-          <button class="ghost" @click="gradeTarget = null">取消</button>
-          <button class="primary" :disabled="grading" @click="submitGrade">
-            {{ grading ? '保存中…' : '保存批阅' }}
-          </button>
+        <h4 class="block-title">知识点掌握度</h4>
+        <div v-if="!studentDetail.mastery.length" class="empty small">还没有诊断数据</div>
+        <div v-for="item in studentDetail.mastery" :key="item.kp_id" class="progress-row">
+          <div class="progress-label">
+            <span>{{ item.title || item.kp_id }}</span>
+            <span class="num">{{ item.score }}</span>
+          </div>
+          <div class="bar"><div class="fill mastery" :style="{ width: `${item.score}%` }"></div></div>
         </div>
+
+        <h4 class="block-title">提交记录</h4>
+        <div v-if="!studentDetail.submissions.length" class="empty small">还没有提交</div>
+        <table v-else class="table">
+          <thead><tr><th>任务</th><th>时间</th><th>状态</th><th>分数</th><th></th></tr></thead>
+          <tbody>
+            <tr v-for="item in studentDetail.submissions" :key="item.id">
+              <td>{{ item.assignment_title }}</td>
+              <td>{{ formatTime(item.submitted_at) }}</td>
+              <td>{{ statusText(item.status) }}</td>
+              <td>{{ item.score ?? '-' }}</td>
+              <td>
+                <button class="link" @click="openGrade(item); studentDetail = null">批阅</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -690,9 +777,62 @@ onMounted(loadClasses)
   color: #94a3b8;
 }
 
-.form-grid button {
-  justify-self: start;
+.form-actions {
   grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.late-check {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.editing-hint {
+  font-size: 12px;
+  color: #b45309;
+}
+
+.head-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.link.danger {
+  color: #ef4444;
+}
+
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:hover {
+  background: #f8fafc;
+}
+
+.block-title {
+  margin: 18px 0 8px;
+  font-size: 13px;
+  color: #334155;
+}
+
+.sub-inline {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-left: 6px;
 }
 
 .row {

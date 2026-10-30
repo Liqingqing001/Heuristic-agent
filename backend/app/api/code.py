@@ -85,6 +85,8 @@ def analyze_endpoint(
             raise HTTPException(403, "你不在该任务所属的班级里")
         if assignment["type"] != "code":
             raise HTTPException(400, "该任务不是代码类任务")
+        if store.assignment_closed(assignment):
+            raise HTTPException(400, "任务已截止，不接受提交")
 
     # 先建一条空记录，用于承接流式结果
     rec = store.create_code_analysis(user["user_id"], req.code, req.language, req.question)

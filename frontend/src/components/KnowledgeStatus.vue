@@ -1,9 +1,9 @@
 <script setup>
     import { computed, ref, onMounted } from 'vue'
-    import { marked } from 'marked'
     import { ingestKnowledge } from '../api.js'
     import { state } from '../session.js'
     import { toast } from '../toast.js'
+    import { renderMarkdown } from '../markdown.js'
 
     const API = '/api/knowledge'
 
@@ -100,7 +100,6 @@
         ingesting.value = false
     }
 
-    const renderMarkdown = (text) => marked.parse(text || '')
     const preview = (text) => (text || '').replace(/[#*`>\-]/g, '').slice(0, 90)
 
     onMounted(loadStats)

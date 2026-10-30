@@ -52,6 +52,27 @@
 ### 环境要求
 Python 3.12、Node 18+、一个 DeepSeek API Key（每个使用者自备）。
 
+### 一键启动（推荐）
+
+```powershell
+.\start.ps1 -Install     # 首次：装依赖并启动；之后直接 .\start.ps1
+```
+
+脚本会检查 `.env`、装依赖、启动后端（8000）和前端（5173），并自动打开浏览器。
+
+### 测试
+
+```powershell
+cd backend
+py -m pytest tests -q          # 接口冒烟测试：注册→建班→发任务→提交→批阅→看板→导出
+py scripts\check_kp.py --strict # 知识点校验
+py scripts\leak_check.py        # 不泄题检查
+```
+
+推送到 GitHub 会自动跑 `.github/workflows/ci.yml`（后端测试 + 知识点校验 + 前端构建）。
+
+### 手动启动
+
 ### 后端
 
 ```powershell
@@ -150,23 +171,32 @@ backend/
     check_kp.py           # 知识点校验 + 覆盖矩阵
     seed_demo.py          # 生成演示数据（8 个学生、多次提交、批阅）
     leak_check.py         # 检查历史 AI 回复有没有泄露完整代码
+  tests/
+    conftest.py           # 临时数据库 + TestClient
+    test_api.py           # 冒烟测试：建班→发任务→提交→批阅→看板→导出
+start.ps1                 # 一键启动脚本
+.github/workflows/ci.yml  # CI：后端测试 + 知识点校验 + 前端构建
 frontend/
   src/
     session.js            # 登录用户、个人密钥、当前任务
     api.js                # 接口封装（Token + X-LLM-Key + SSE）
+    markdown.js           # Markdown 渲染 + DOMPurify 消毒
+    kp.js                 # 知识点编号 → 章节/标题
     toast.js              # 全局提示
     App.vue               # 左侧导航、角色页签、#/ 路由、状态横幅
     style.css             # 全局样式（含对话参考知识点标签）
     components/
       AssistantPanel.vue # 学习助手：对话 / 代码诊断两种模式
       ChatPanel.vue       # 对话（回答下方展示参考知识点）
+      CodeEditor.vue      # CodeMirror 代码编辑器
       CodeAnalyze.vue     # 代码剖析（含任务模式、诊断标签）
       StudentHome.vue     # 学生首页：待办 / 最近提交 / 薄弱知识点
-      TeacherHome.vue     # 教师首页：概览 / 趋势 / 待批阅 / 薄弱知识点
+      TeacherHome.vue     # 教师首页：概览 / 趋势 / 待批阅（可直接批阅）
       HomeworkPanel.vue   # 作业中心（任务列表 + 我的提交 + 分数评语）
       ProfilePanel.vue    # 我的（个人资料 / 安全设置）
       KnowledgeStatus.vue # 知识库浏览/建库
-      TeacherPanel.vue    # 班级管理 / 任务 / 批阅 / 看板
+      TeacherPanel.vue    # 班级管理 / 任务编辑 / 批阅 / 学生档案 / 导出
+      GradeModal.vue      # 批阅弹窗
       StatusBanner.vue    # 顶部状态横幅
       SettingsModal.vue   # 模型密钥设置
       ToastHost.vue       # 全局提示

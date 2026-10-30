@@ -1,6 +1,5 @@
 <script setup>
 import { ref, nextTick, onMounted } from 'vue'
-import { marked } from 'marked'
 import hljs from 'highlight.js'
 import {
   streamChat,
@@ -10,6 +9,7 @@ import {
   deleteConversation,
 } from '../api.js'
 import { chapterLabel } from '../kp.js'
+import { renderMarkdown } from '../markdown.js'
 
 const conversations = ref([])
 const currentId = ref(null)
@@ -17,8 +17,6 @@ const messages = ref([])
 const input = ref('')
 const loading = ref(false)
 const chatBox = ref(null)
-
-const renderMarkdown = (text) => marked.parse(text)
 
 function highlightBlocks() {
   if (!chatBox.value) return

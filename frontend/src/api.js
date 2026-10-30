@@ -287,6 +287,47 @@ export async function gradeSubmission(id, payload) {
   return resp.json()
 }
 
+export async function updateAssignment(id, payload) {
+  const resp = await fetch(`/api/assignments/${id}`, {
+    method: 'PATCH',
+    headers: authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  })
+  if (!resp.ok) throw new Error(await readError(resp))
+  return resp.json()
+}
+
+export async function deleteAssignment(id) {
+  const resp = await fetch(`/api/assignments/${id}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  })
+  if (!resp.ok) throw new Error(await readError(resp))
+  return resp.json()
+}
+
+export async function getStudentDetail(classId, userId) {
+  const resp = await fetch(`/api/classes/${classId}/students/${userId}`, {
+    headers: authHeaders(),
+  })
+  if (!resp.ok) throw new Error(await readError(resp))
+  return resp.json()
+}
+
+export async function exportScores(classId) {
+  const resp = await fetch(`/api/classes/${classId}/export.csv`, { headers: authHeaders() })
+  if (!resp.ok) throw new Error(await readError(resp))
+  const blob = await resp.blob()
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `成绩单-班级${classId}.csv`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+}
+
 export async function classMastery(classId) {
   const resp = await fetch(`/api/classes/${classId}/mastery`, { headers: authHeaders() })
   if (!resp.ok) return { items: [] }
