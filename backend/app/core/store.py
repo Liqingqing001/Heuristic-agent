@@ -443,8 +443,12 @@ def list_assignments(class_id: int, user_id: int | None = None) -> list[dict]:
             (class_id,),
         ).fetchall()
         items = _rows(rows)
+        titles = _kp_titles()
         for item in items:
             item["kp_ids"] = [k for k in (item.get("kp_ids") or "").split(",") if k]
+            item["kp_titles"] = {
+                kp_id: (titles.get(kp_id, {}) or {}).get("title", "") for kp_id in item["kp_ids"]
+            }
             item["submitted_count"] = item.get("submitted_count", 0)
             item["member_count"] = item.get("member_count", 0)
             item["is_overdue"] = _is_overdue(item.get("due_at"))
@@ -472,6 +476,10 @@ def get_assignment(assignment_id: int) -> dict | None:
             return None
         item = dict(row)
         item["kp_ids"] = [k for k in (item.get("kp_ids") or "").split(",") if k]
+        titles = _kp_titles()
+        item["kp_titles"] = {
+            kp_id: (titles.get(kp_id, {}) or {}).get("title", "") for kp_id in item["kp_ids"]
+        }
         return item
     finally:
         conn.close()

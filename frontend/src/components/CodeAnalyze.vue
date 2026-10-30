@@ -9,6 +9,7 @@
         deleteCodeAnalysis,
     } from '../api.js'
     import { clearAssignment, state } from '../session.js'
+    import { chapterLabel } from '../kp.js'
 
     // 表单状态
     const code = ref('')
@@ -213,7 +214,9 @@
                 <span v-if="diagnosis.hint_level_reached" class="chip">
                     提示层级：{{ diagnosis.hint_level_reached }}/3
                 </span>
-                <span v-for="kp in diagnosis.kp_ids" :key="kp" class="chip kp">{{ kp }}</span>
+                <span v-for="kp in diagnosis.kp_ids" :key="kp" class="chip kp">
+                    {{ chapterLabel(kp) }}
+                </span>
                 <span v-if="submitted" class="chip done">已提交给老师</span>
             </div>
 

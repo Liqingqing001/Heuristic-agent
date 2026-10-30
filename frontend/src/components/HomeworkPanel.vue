@@ -8,6 +8,7 @@ import {
   listClasses,
   submitTextAnswer,
 } from '../api.js'
+import { chapterLabel } from '../kp.js'
 
 const emit = defineEmits(['start-assignment'])
 
@@ -215,7 +216,9 @@ onMounted(loadClasses)
             <div class="meta">
               <span>截止：{{ formatTime(selected.due_at) }}</span>
               <span v-if="selected.is_overdue" class="overdue">已截止</span>
-              <span v-for="kp in selected.kp_ids" :key="kp" class="kp-chip">{{ kp }}</span>
+              <span v-for="kp in selected.kp_ids" :key="kp" class="kp-chip">
+                {{ selected.kp_titles?.[kp] || chapterLabel(kp) }}
+              </span>
             </div>
             <p v-if="selected.description" class="desc">{{ selected.description }}</p>
           </header>

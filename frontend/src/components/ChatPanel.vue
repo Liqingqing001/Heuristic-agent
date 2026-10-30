@@ -9,6 +9,7 @@ import {
   createConversation,
   deleteConversation,
 } from '../api.js'
+import { chapterLabel } from '../kp.js'
 
 const conversations = ref([])
 const currentId = ref(null)
@@ -141,7 +142,7 @@ onMounted(async () => {
             <div v-if="m.references?.length" class="refs">
               <span class="refs-label">参考知识点</span>
               <span v-for="ref in m.references" :key="ref.kp_id" class="ref">
-                {{ ref.kp_id }}<template v-if="ref.title"> · {{ ref.title }}</template>
+                {{ ref.title || chapterLabel(ref.kp_id) }}
               </span>
             </div>
           </template>

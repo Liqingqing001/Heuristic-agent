@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { listAssignments, listClasses, myMastery } from '../api.js'
 import { state } from '../session.js'
+import { chapterLabel } from '../kp.js'
 
 const emit = defineEmits(['goto', 'start-assignment'])
 
@@ -169,7 +170,7 @@ onMounted(load)
 
       <div v-for="item in weakPoints" :key="item.kp_id" class="weak-row">
         <div class="weak-title">
-          <span class="kp">{{ item.kp_id }}</span>
+          <span class="kp">{{ chapterLabel(item.kp_id) }}</span>
           {{ item.title || '未命名知识点' }}
         </div>
         <div class="bar">
@@ -337,7 +338,7 @@ onMounted(load)
 }
 
 .weak-title {
-  width: 42%;
+  width: 52%;
   font-size: 13px;
   color: #334155;
   white-space: nowrap;
