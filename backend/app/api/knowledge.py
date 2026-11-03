@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
 
@@ -98,14 +99,14 @@ def stats():
 
 
 @router.get("/knowledge/list")
-def list_knowledge(category: str = Query("lecture")):
+def list_knowledge(category: Literal["lecture", "solutions", "buglib", "kp"] = Query("lecture")):
     """列出某个分类下的所有知识条目。"""
     items = _items_of(category)
     return {"items": items, "total": len(items)}
 
 
 @router.get("/knowledge/search")
-def search_knowledge(q: str = Query(...), top_k: int = Query(20)):
+def search_knowledge(q: str = Query(...), top_k: int = Query(20, ge=1, le=100)):
     """简易搜索：遍历所有 Markdown，标题或内容包含关键词就返回。"""
     q = q.strip()
     if not q:

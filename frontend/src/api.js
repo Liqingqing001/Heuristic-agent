@@ -1,5 +1,6 @@
 // 后端接口封装：Token 注入 + BYOK 密钥透传 + SSE 流式解析
 import { getLlmKey } from './session.js'
+import { consumeSse } from './sse.js'
 
 const TOKEN_KEY = 'zhiyu_token'
 
@@ -97,37 +98,7 @@ async function streamFetch(url, body, onToken, onError) {
     onError(await readError(resp))
     return null
   }
-  const reader = resp.body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
-  const meta = {}
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-    buffer += decoder.decode(value, { stream: true })
-    const parts = buffer.split('\n\n')
-    buffer = parts.pop()
-    for (const part of parts) {
-      const line = part.trim()
-      if (!line.startsWith('data:')) continue
-      const payload = line.slice(5).trim()
-      let obj
-      try {
-        obj = JSON.parse(payload)
-      } catch {
-        continue
-      }
-      if (obj.token) onToken(obj.token)
-      else if (obj.error) onError(obj.error)
-      else if (obj.done) {
-        Object.assign(meta, obj)
-        return meta
-      } else {
-        Object.assign(meta, obj)
-      }
-    }
-  }
-  return meta
+  return consumeSse(resp.body, onToken, onError)
 }
 
 // ==================== 对话 ====================

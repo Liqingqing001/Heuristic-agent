@@ -3,11 +3,9 @@ import os
 import tempfile
 from pathlib import Path
 
-TEST_DB = Path(tempfile.gettempdir()) / "zhiyu_test.db"
-for suffix in ("", "-wal", "-shm"):
-    candidate = Path(str(TEST_DB) + suffix)
-    if candidate.exists():
-        candidate.unlink()
+# 每次测试进程使用独立目录，退出时连同 WAL/SHM 一起清理。
+_TEST_DIR = tempfile.TemporaryDirectory(prefix="zhiyu-tests-")
+TEST_DB = Path(_TEST_DIR.name) / "app.db"
 
 os.environ["APP_DB_PATH"] = str(TEST_DB)
 
