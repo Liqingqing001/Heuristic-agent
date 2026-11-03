@@ -1,0 +1,32 @@
+{"id": "kp01", "query": "头指针和头结点有什么区别？", "relevant_kp_ids": ["ds-01-01"], "relevant_sources": ["01-链表.md"]}
+{"id": "kp02", "query": "单链表插入为什么必须先保存原后继，再修改 p->next？", "relevant_kp_ids": ["ds-01-02"], "relevant_sources": ["03-链表断链.md", "01-链表.md"]}
+{"id": "kp03", "query": "快慢指针怎样判断单链表是否有环？", "relevant_kp_ids": ["ds-01-03"], "relevant_sources": ["02-链表是否有环.md"]}
+{"id": "kp04", "query": "顺序栈与链栈的判空和判满条件有什么不同？", "relevant_kp_ids": ["ds-02-01"], "relevant_sources": ["02-栈与队列.md"]}
+{"id": "kp05", "query": "循环队列为什么要空出一个位置，如何判满？", "relevant_kp_ids": ["ds-02-02"], "relevant_sources": ["02-栈与队列.md"]}
+{"id": "kp06", "query": "括号匹配时遇到右括号但栈为空，应该检查什么？", "relevant_kp_ids": ["ds-02-03"], "relevant_sources": []}
+{"id": "kp07", "query": "二叉树先序、中序、后序遍历的访问顺序分别是什么？", "relevant_kp_ids": ["ds-03-01"], "relevant_sources": ["03-二叉树与BST.md"]}
+{"id": "kp08", "query": "怎样根据先序和中序遍历序列还原二叉树？", "relevant_kp_ids": ["ds-03-02"], "relevant_sources": []}
+{"id": "kp09", "query": "二叉排序树插入时如何根据键值选择左子树或右子树？", "relevant_kp_ids": ["ds-03-03"], "relevant_sources": ["03-二叉树与BST.md"]}
+{"id": "kp10", "query": "二叉排序树删除有两个孩子的结点时，为什么要找中序后继？", "relevant_kp_ids": ["ds-03-04"], "relevant_sources": ["03-二叉树与BST.md"]}
+{"id": "kp11", "query": "AVL 平衡因子如何计算，LL 与 LR 应该选择什么旋转？", "relevant_kp_ids": ["ds-04-01"], "relevant_sources": ["04-AVL树旋转.md"]}
+{"id": "kp12", "query": "AVL 插入后为什么要从插入位置向上更新高度？", "relevant_kp_ids": ["ds-04-02"], "relevant_sources": ["05-树旋转失衡.md"]}
+{"id": "kp13", "query": "快速排序的分区结束后，枢轴两侧应该满足什么条件？", "relevant_kp_ids": ["ds-05-01"], "relevant_sources": ["05-排序.md"]}
+{"id": "kp14", "query": "归并排序合并两个有序区间时，如何处理剩余元素？", "relevant_kp_ids": ["ds-05-02"], "relevant_sources": ["05-排序.md"]}
+{"id": "kp15", "query": "堆排序取出最大元素后，为什么还需要向下调整？", "relevant_kp_ids": ["ds-05-03"], "relevant_sources": ["05-排序.md"]}
+{"id": "kp16", "query": "二分查找的左闭右闭区间，循环边界为什么是 left <= right？", "relevant_kp_ids": ["ds-06-01"], "relevant_sources": ["06-查找.md"]}
+{"id": "kp17", "query": "哈希表的开放定址和链地址法怎样处理冲突？", "relevant_kp_ids": ["ds-06-02"], "relevant_sources": ["06-查找.md"]}
+{"id": "kp18", "query": "图的深度优先遍历和广度优先遍历分别使用什么辅助结构？", "relevant_kp_ids": ["ds-07-01"], "relevant_sources": ["07-图.md"]}
+{"id": "kp19", "query": "Dijkstra 算法为什么不能直接处理负权边？", "relevant_kp_ids": ["ds-07-02"], "relevant_sources": ["07-图.md"]}
+{"id": "kp20", "query": "频繁随机访问和频繁插入删除时，顺序表与链表应该如何取舍？", "relevant_kp_ids": ["ds-08-01"], "relevant_sources": ["08-线性表.md"]}
+{"id": "bug01", "query": "释放内存后另一个指针仍然访问原地址，为什么会随机崩溃？", "relevant_kp_ids": [], "relevant_sources": ["01-指针悬空.md"]}
+{"id": "bug02", "query": "free(p) 后 p != NULL 仍为真，再次 free 出现 double free，原因是什么？", "relevant_kp_ids": [], "relevant_sources": ["02-free后未置NULL.md", "01-指针悬空.md"]}
+{"id": "bug03", "query": "插入链表后 q->next 指向 q 自己，后半条链表丢失了。", "relevant_kp_ids": ["ds-01-02"], "relevant_sources": ["03-链表断链.md"]}
+{"id": "bug04", "query": "循环 malloc 后没有配对 free，程序内存越来越大，怎么定位？", "relevant_kp_ids": [], "relevant_sources": ["04-内存泄漏.md"]}
+{"id": "bug05", "query": "AVL 旋转返回了新根，但父结点没接回去，为什么树还是失衡？", "relevant_kp_ids": ["ds-04-02"], "relevant_sources": ["05-树旋转失衡.md"]}
+{"id": "bug06", "query": "递归函数没有终止条件，为什么出现栈溢出？", "relevant_kp_ids": [], "relevant_sources": ["06-递归基线缺失.md"]}
+{"id": "alias01", "query": "BST 插入遇到相同键值时应该怎么处理？", "relevant_kp_ids": ["ds-03-03"], "relevant_sources": ["03-二叉树与BST.md"]}
+{"id": "alias02", "query": "BFS 和 DFS 在有环的图中为什么需要 visited？", "relevant_kp_ids": ["ds-07-01"], "relevant_sources": ["07-图.md"]}
+{"id": "long01", "query": "我正在写一个循环队列，数组长度是 capacity。插入很多次以后 rear 会绕回数组开头，front 有时候也在移动。我不知道应该怎样区分队列为空和队列已满，尤其想理解为什么常见实现会保留一个空位置。", "relevant_kp_ids": ["ds-02-02"], "relevant_sources": ["02-栈与队列.md"]}
+{"id": "none01", "query": "明天杭州会下雨吗？", "relevant_kp_ids": [], "relevant_sources": []}
+{"id": "none02", "query": "帮我推荐一家意大利餐厅。", "relevant_kp_ids": [], "relevant_sources": []}
+{"id": "none03", "query": "量子纠缠如何用于黑洞信息悖论？", "relevant_kp_ids": [], "relevant_sources": []}

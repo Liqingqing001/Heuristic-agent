@@ -143,6 +143,25 @@ onActivated(async () => {
           ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       )
     }
+  } else if (
+    target.source &&
+    CATEGORIES.some((c) => c.key === target.category)
+  ) {
+    await openCategory(CATEGORIES.find((c) => c.key === target.category))
+    const matching = items.value
+      .map((item, index) => ({ item, index }))
+      .filter(({ item }) => item.source === target.source.replace(/\.md$/i, ''))
+    const exact =
+      matching.find(({ item }) => target.section?.endsWith(item.title)) ||
+      matching[0]
+    if (exact) {
+      expandedIndex.value = exact.index
+      nextTick(() =>
+        document
+          .querySelector('.item-card.expanded')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      )
+    }
   } else if (target.query) {
     searchQuery.value = target.query
     await doSearch()

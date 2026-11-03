@@ -269,3 +269,18 @@ test('教师登录过期后换学生登录回到学生首页', async ({ page }) 
   await expect(page.locator('.teacher-panel')).toHaveCount(0)
   await expect(desktopTab(page, '作业中心')).toBeVisible()
 })
+
+test('讲义引用直达来源章节，不依赖知识点编号', async ({ page }) => {
+  await login(page, student, 'assistant')
+  await page.route('**/api/chat', (route) =>
+    route.fulfill({
+      contentType: 'text/event-stream',
+      body: 'data: {"token":"先思考结点和指针域的关系。"}\n\ndata: {"references":[{"source":"01-链表.md","category":"lecture","section":"链表 / 核心概念","title":"链表讲义","chunk_id":"lecture-test"}]}\n\ndata: {"done":true}\n\n',
+    })
+  )
+  await page.getByLabel('你的问题', { exact: true }).fill('什么是链表？')
+  await page.getByRole('button', { name: '发送', exact: true }).click()
+  await page.locator('.ref').click()
+  await expect(page.locator('.item-card.expanded')).toContainText('核心概念')
+  await expect(page.locator('.item-card.expanded')).toContainText('数据域')
+})

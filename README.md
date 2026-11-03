@@ -6,6 +6,7 @@
 > 技术改动清单见 [`docs/本次改动.md`](docs/本次改动.md)。
 > 2026-11 优化：知识库参数校验、流式解析与测试隔离，详见 [`docs/优化记录-2026-11-03.md`](docs/优化记录-2026-11-03.md)。
 > UI 与体验更新（含截图）：[`docs/UI与体验优化-2026-11-03.md`](docs/UI与体验优化-2026-11-03.md)。
+> RAG 检索、索引升级与评测结果：[`docs/RAG优化-2026-11-03.md`](docs/RAG优化-2026-11-03.md)。已有部署升级后请教师重新建库，以启用新版向量索引。
 
 ---
 
@@ -71,9 +72,10 @@ cd backend
 py -m pytest tests -q          # 接口冒烟测试：注册→建班→发任务→提交→批阅→看板→导出
 py scripts\check_kp.py --strict # 知识点校验
 py scripts\leak_check.py        # 不泄题检查
+py scripts\eval_rag.py --mode lexical --audience hint --strict # RAG 离线检索评测，不下载模型
 ```
 
-推送到 GitHub 会自动跑 `.github/workflows/ci.yml`（后端测试 + 知识点校验 + 前端构建）。
+推送到 GitHub 会自动跑 `.github/workflows/ci.yml`（后端测试、知识点校验、RAG 词法严格评测、前端构建与浏览器回归）。RAG 的完整复现命令与评测范围见上述优化文档。
 
 ### 手动启动
 

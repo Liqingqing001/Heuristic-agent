@@ -252,12 +252,19 @@ onBeforeUnmount(() => controller?.abort())
               <span class="refs-label">参考知识点</span
               ><button
                 v-for="reference in m.references"
-                :key="reference.kp_id"
+                :key="reference.chunk_id || reference.kp_id || reference.source"
                 class="ref"
-                @click="() => { navigateTo('knowledge', {
-                    kpId: reference.kp_id,
-                    query: reference.title,
-                  }) }"
+                @click="
+                  () => {
+                    navigateTo('knowledge', {
+                      kpId: reference.kp_id,
+                      query: reference.title,
+                      source: reference.source,
+                      category: reference.category,
+                      section: reference.section,
+                    })
+                  }
+                "
               >
                 {{ reference.title || chapterLabel(reference.kp_id) }} ↗
               </button>
@@ -268,8 +275,12 @@ onBeforeUnmount(() => controller?.abort())
       <button
         v-if="newContent"
         class="new-content"
-        @click="() => { follow = true
-          scrollToBottom(true) }"
+        @click="
+          () => {
+            follow = true
+            scrollToBottom(true)
+          }
+        "
       >
         有新内容 ↓
       </button>

@@ -14,4 +14,5 @@ def status():
     except Exception as exc:  # 向量库不可用时不影响登录和对话
         info["knowledge"] = {}
         info["knowledge_error"] = str(exc)
+    info["retrieval"] = rag.retrieval_status()
     return info

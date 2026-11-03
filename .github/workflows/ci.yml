@@ -20,6 +20,9 @@ jobs:
       - name: Check knowledge points
         working-directory: backend
         run: python scripts/check_kp.py --strict
+      - name: Evaluate lexical RAG (offline)
+        working-directory: backend
+        run: python scripts/eval_rag.py --mode lexical --audience hint --strict
       - name: Run API tests
         working-directory: backend
         run: python -m pytest tests -q

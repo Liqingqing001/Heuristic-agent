@@ -1,0 +1,1440 @@
+{
+  "requested_mode": "lexical",
+  "audience": "hint",
+  "top_k": 3,
+  "case_count": 32,
+  "answerable_count": 29,
+  "unanswerable_count": 3,
+  "metrics": {
+    "hit_at_k": 1,
+    "recall_at_k": 0.8160919540229885,
+    "mrr": 0.9655172413793104,
+    "returned_precision": 0.8275862068965517,
+    "no_answer_accuracy": 1,
+    "latency_p50_ms": 4.936,
+    "latency_p95_ms": 6.259
+  },
+  "retrieval_modes": {
+    "lexical": 87
+  },
+  "cases": [
+    {
+      "id": "kp01",
+      "query": "头指针和头结点有什么区别？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-01-01",
+        "source:01-链表.md"
+      ],
+      "matched": [
+        "kp:ds-01-01"
+      ],
+      "hit": true,
+      "recall": 0.5,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "50ec6e72891ac37855a70cfe6979be5a598d292954e1ca1d13458690ae95323f",
+          "document_id": "kp/ds-01-01-单链表结点与头指针.md",
+          "kp_id": "ds-01-01",
+          "source": "ds-01-01-单链表结点与头指针.md",
+          "section": "分级练习 / 练习 1：判断带头结点单链表是否为空（难度：1）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "3d917b3e4a471fa62ce2762f14493b18ae879c2d49a434e13e9f009509c200b9",
+          "document_id": "kp/ds-01-01-单链表结点与头指针.md",
+          "kp_id": "ds-01-01",
+          "source": "ds-01-01-单链表结点与头指针.md",
+          "section": "要点",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "46b76aa00e6a4f444221b7f4f58f0cd7670e37fde7a8af364f45fa3db36f6a79",
+          "document_id": "kp/ds-01-03-单链表的反转与快慢指针.md",
+          "kp_id": "ds-01-03",
+          "source": "ds-01-03-单链表的反转与快慢指针.md",
+          "section": "分级练习 / 练习 3：用快慢指针找中点并一分为二（难度：3）",
+          "retrieval": "lexical",
+          "distance": 0.12857142857142867
+        }
+      ],
+      "latency_ms": 92.417
+    },
+    {
+      "id": "kp02",
+      "query": "单链表插入为什么必须先保存原后继，再修改 p->next？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-01-02",
+        "source:01-链表.md",
+        "source:03-链表断链.md"
+      ],
+      "matched": [
+        "kp:ds-01-02",
+        "source:01-链表.md"
+      ],
+      "hit": true,
+      "recall": 0.6666666666666666,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "8497474905f2cac4b90972dbf9514c6a8df84fde8746ff29e218e5d3b7480e91",
+          "document_id": "lecture/01-链表.md",
+          "kp_id": null,
+          "source": "01-链表.md",
+          "section": "链表（单链表 / 双链表 / 循环链表） / 单链表插入的关键顺序",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "0534e2020c868cef4b067428309b2b13d6e9cf2ebf4ad490b522c87a7308afb1",
+          "document_id": "lecture/01-链表.md",
+          "kp_id": null,
+          "source": "01-链表.md",
+          "section": "链表（单链表 / 双链表 / 循环链表） / 双链表插入",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "4f0e60bdb54b6da1eb985fdd11ca192ed88d5596b31573f14768a2d5b5b65f42",
+          "document_id": "kp/ds-01-02-单链表插入与删除.md",
+          "kp_id": "ds-01-02",
+          "source": "ds-01-02-单链表插入与删除.md",
+          "section": "要点",
+          "retrieval": "lexical",
+          "distance": 0.046875
+        }
+      ],
+      "latency_ms": 5.941
+    },
+    {
+      "id": "kp03",
+      "query": "快慢指针怎样判断单链表是否有环？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-01-03",
+        "source:02-链表是否有环.md"
+      ],
+      "matched": [
+        "kp:ds-01-03"
+      ],
+      "hit": true,
+      "recall": 0.5,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "61448ccb4f86f1374c7b1ce926c1f2e020c46d547a4989342e7e376f6d8ccb97",
+          "document_id": "kp/ds-01-03-单链表的反转与快慢指针.md",
+          "kp_id": "ds-01-03",
+          "source": "ds-01-03-单链表的反转与快慢指针.md",
+          "section": "分级练习 / 练习 2：判断有环并返回环的入口（难度：4）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "69796944cb64caff72574fdad8d1c45a5e929055a35edb9b0fd6890938f36c6e",
+          "document_id": "kp/ds-01-03-单链表的反转与快慢指针.md",
+          "kp_id": "ds-01-03",
+          "source": "ds-01-03-单链表的反转与快慢指针.md",
+          "section": "分级练习 / 练习 2：判断有环并返回环的入口（难度：4）",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "50ec6e72891ac37855a70cfe6979be5a598d292954e1ca1d13458690ae95323f",
+          "document_id": "kp/ds-01-01-单链表结点与头指针.md",
+          "kp_id": "ds-01-01",
+          "source": "ds-01-01-单链表结点与头指针.md",
+          "section": "分级练习 / 练习 1：判断带头结点单链表是否为空（难度：1）",
+          "retrieval": "lexical",
+          "distance": 0.1527777777777779
+        }
+      ],
+      "latency_ms": 5.109
+    },
+    {
+      "id": "kp04",
+      "query": "顺序栈与链栈的判空和判满条件有什么不同？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-02-01",
+        "source:02-栈与队列.md"
+      ],
+      "matched": [
+        "kp:ds-02-01",
+        "source:02-栈与队列.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "19cef9b7438e5c3f95510de09545737e3a7dc34a85f2ef8be115c38f88ee00dc",
+          "document_id": "kp/ds-02-01-顺序栈与链栈.md",
+          "kp_id": "ds-02-01",
+          "source": "ds-02-01-顺序栈与链栈.md",
+          "section": "分级练习 / 练习 1：补全顺序栈的四个基本操作（难度：1）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "721183974a12ffb676e14f6b901f61b9e2bb3cbf5d7b92420e82de6a5a63a70f",
+          "document_id": "kp/ds-02-01-顺序栈与链栈.md",
+          "kp_id": "ds-02-01",
+          "source": "ds-02-01-顺序栈与链栈.md",
+          "section": "要点",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "ab32eb4122233d250cbd2ecced89bd3480c9a389b40026207335f94f81aa3aa3",
+          "document_id": "lecture/02-栈与队列.md",
+          "kp_id": null,
+          "source": "02-栈与队列.md",
+          "section": "栈与队列 / 栈（Stack）",
+          "retrieval": "lexical",
+          "distance": 0.08955223880597019
+        }
+      ],
+      "latency_ms": 4.902
+    },
+    {
+      "id": "kp05",
+      "query": "循环队列为什么要空出一个位置，如何判满？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-02-02",
+        "source:02-栈与队列.md"
+      ],
+      "matched": [
+        "kp:ds-02-02",
+        "source:02-栈与队列.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "aeb6018b702d0701a0ac5dbd80fbf87a8d2383acd37487726470b5c9643fb26b",
+          "document_id": "kp/ds-02-02-循环队列的判空与判满.md",
+          "kp_id": "ds-02-02",
+          "source": "ds-02-02-循环队列的判空与判满.md",
+          "section": "分级练习 / 练习 3：遍历循环队列并输出长度（难度：2）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "5dd5b43b80f74eb0d07eafa7b8f05213127730fb9026639a3dcc285420512316",
+          "document_id": "lecture/02-栈与队列.md",
+          "kp_id": null,
+          "source": "02-栈与队列.md",
+          "section": "栈与队列 / 队列（Queue）",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "a2d0338b7ee153370eb5c10c85706707b5456fc28adda15f4e8a612e837c9800",
+          "document_id": "kp/ds-02-02-循环队列的判空与判满.md",
+          "kp_id": "ds-02-02",
+          "source": "ds-02-02-循环队列的判空与判满.md",
+          "section": "典型错误 / 错误 2：指针移动忘记取模",
+          "retrieval": "lexical",
+          "distance": 0.031746031746031855
+        }
+      ],
+      "latency_ms": 5.15
+    },
+    {
+      "id": "kp06",
+      "query": "括号匹配时遇到右括号但栈为空，应该检查什么？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-02-03"
+      ],
+      "matched": [
+        "kp:ds-02-03"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "c80e268f6bd1b17bc86c0300aaec94d8f5471806a7fd106ae27e7a17da9c888e",
+          "document_id": "kp/ds-02-03-栈的应用：括号匹配与表达式求值.md",
+          "kp_id": "ds-02-03",
+          "source": "ds-02-03-栈的应用：括号匹配与表达式求值.md",
+          "section": "分级练习 / 练习 1：三种括号的匹配检查（难度：2）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "4777e08c95e98e49a647167ae249a69fa1ca6fac13d120e7d18499c0ecef8056",
+          "document_id": "kp/ds-02-03-栈的应用：括号匹配与表达式求值.md",
+          "kp_id": "ds-02-03",
+          "source": "ds-02-03-栈的应用：括号匹配与表达式求值.md",
+          "section": "典型错误 / 错误 2：括号匹配只数个数、不检查类型",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "ab32eb4122233d250cbd2ecced89bd3480c9a389b40026207335f94f81aa3aa3",
+          "document_id": "lecture/02-栈与队列.md",
+          "kp_id": null,
+          "source": "02-栈与队列.md",
+          "section": "栈与队列 / 栈（Stack）",
+          "retrieval": "lexical",
+          "distance": 0.046875
+        }
+      ],
+      "latency_ms": 4.814
+    },
+    {
+      "id": "kp07",
+      "query": "二叉树先序、中序、后序遍历的访问顺序分别是什么？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-03-01",
+        "source:03-二叉树与BST.md"
+      ],
+      "matched": [
+        "kp:ds-03-01"
+      ],
+      "hit": true,
+      "recall": 0.5,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "cd5deb92c7ba3117fc2453a068750dfa8afaea46effa531e293d04e491c5e1da",
+          "document_id": "kp/ds-03-01-二叉树的存储与遍历.md",
+          "kp_id": "ds-03-01",
+          "source": "ds-03-01-二叉树的存储与遍历.md",
+          "section": "典型错误 / 错误 2：中序遍历的两条递归调用写反",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "b044d85572000b1afca115e685bcb4ebc35f46ff206b183ff67633e06b65c030",
+          "document_id": "kp/ds-03-01-二叉树的存储与遍历.md",
+          "kp_id": "ds-03-01",
+          "source": "ds-03-01-二叉树的存储与遍历.md",
+          "section": "要点",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "33cc9a351933b375b23357f94a8394c83b0edea7e61dec29962dfcb22128f6d9",
+          "document_id": "kp/ds-03-02-由遍历序列还原二叉树.md",
+          "kp_id": "ds-03-02",
+          "source": "ds-03-02-由遍历序列还原二叉树.md",
+          "section": "典型错误 / 错误 1：以为\"前序 + 后序\"也能唯一还原",
+          "retrieval": "lexical",
+          "distance": 0.031746031746031855
+        }
+      ],
+      "latency_ms": 5.36
+    },
+    {
+      "id": "kp08",
+      "query": "怎样根据先序和中序遍历序列还原二叉树？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-03-02"
+      ],
+      "matched": [
+        "kp:ds-03-02"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "9b1c18af8f083c0f7a465b011ec03eead8453538b87dd4377eeb1ba1ee7a6667",
+          "document_id": "kp/ds-03-02-由遍历序列还原二叉树.md",
+          "kp_id": "ds-03-02",
+          "source": "ds-03-02-由遍历序列还原二叉树.md",
+          "section": "分级练习 / 练习 1：按前序 + 中序还原这棵二叉树（难度：3）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "3bbbde4ded7c762b61cc9c9ac2f19a32469b26ab2c253ca29e5ea42a5d5fcced",
+          "document_id": "kp/ds-03-02-由遍历序列还原二叉树.md",
+          "kp_id": "ds-03-02",
+          "source": "ds-03-02-由遍历序列还原二叉树.md",
+          "section": "分级练习 / 练习 1：按前序 + 中序还原这棵二叉树（难度：3）",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "8d40ad2bb1c35a598cc64ca8b5f783111ccfe766eb1426735f7ea7ed3267d392",
+          "document_id": "kp/ds-03-01-二叉树的存储与遍历.md",
+          "kp_id": "ds-03-01",
+          "source": "ds-03-01-二叉树的存储与遍历.md",
+          "section": "分级练习 / 练习 1：写出三种遍历序列（难度：2）",
+          "retrieval": "lexical",
+          "distance": 0.16438356164383572
+        }
+      ],
+      "latency_ms": 4.801
+    },
+    {
+      "id": "kp09",
+      "query": "二叉排序树插入时如何根据键值选择左子树或右子树？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-03-03",
+        "source:03-二叉树与BST.md"
+      ],
+      "matched": [
+        "kp:ds-03-03",
+        "source:03-二叉树与BST.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "1911ea355e21f63a1e02c441195d9000a5bb59b271fe13567b1a9379dbed68bf",
+          "document_id": "lecture/03-二叉树与BST.md",
+          "kp_id": null,
+          "source": "03-二叉树与BST.md",
+          "section": "二叉树与二叉搜索树（BST） / 二叉搜索树（BST）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "d2ad99c4e05794b413692e1b2c716ad8011ad51a3432c5822de1545727ba34f4",
+          "document_id": "lecture/03-二叉树与BST.md",
+          "kp_id": null,
+          "source": "03-二叉树与BST.md",
+          "section": "二叉树与二叉搜索树（BST） / BST 删除（考点）",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "58e2cb813626ccb135bcf59c8d3e74a56c1b530afa27d6c9443a87e88d0e9c92",
+          "document_id": "kp/ds-03-03-二叉排序树的查找与插入.md",
+          "kp_id": "ds-03-03",
+          "source": "ds-03-03-二叉排序树的查找与插入.md",
+          "section": "典型错误 / 错误 4：只检查孩子结点就断定这是 BST",
+          "retrieval": "lexical",
+          "distance": 0.0757575757575758
+        }
+      ],
+      "latency_ms": 5.527
+    },
+    {
+      "id": "kp10",
+      "query": "二叉排序树删除有两个孩子的结点时，为什么要找中序后继？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-03-04",
+        "source:03-二叉树与BST.md"
+      ],
+      "matched": [
+        "kp:ds-03-04",
+        "source:03-二叉树与BST.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "d2ad99c4e05794b413692e1b2c716ad8011ad51a3432c5822de1545727ba34f4",
+          "document_id": "lecture/03-二叉树与BST.md",
+          "kp_id": null,
+          "source": "03-二叉树与BST.md",
+          "section": "二叉树与二叉搜索树（BST） / BST 删除（考点）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "1911ea355e21f63a1e02c441195d9000a5bb59b271fe13567b1a9379dbed68bf",
+          "document_id": "lecture/03-二叉树与BST.md",
+          "kp_id": null,
+          "source": "03-二叉树与BST.md",
+          "section": "二叉树与二叉搜索树（BST） / 二叉搜索树（BST）",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "eec976c4e45535694f50b6de8962ac956aa39a9e56a90abed3458d6aa1e5a3fb",
+          "document_id": "kp/ds-03-04-二叉排序树的删除.md",
+          "kp_id": "ds-03-04",
+          "source": "ds-03-04-二叉排序树的删除.md",
+          "section": "典型错误 / 错误 3：以为\"中序后继就是右孩子\"",
+          "retrieval": "lexical",
+          "distance": 0.0757575757575758
+        }
+      ],
+      "latency_ms": 5.988
+    },
+    {
+      "id": "kp11",
+      "query": "AVL 平衡因子如何计算，LL 与 LR 应该选择什么旋转？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-04-01",
+        "source:04-AVL树旋转.md"
+      ],
+      "matched": [
+        "kp:ds-04-01",
+        "source:04-AVL树旋转.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "826cc3b008470163884654fdc646924f2d7934fb94f87c4f1e075c70c26e1ddf",
+          "document_id": "lecture/04-AVL树旋转.md",
+          "kp_id": null,
+          "source": "04-AVL树旋转.md",
+          "section": "AVL 树与平衡旋转 / 平衡因子",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "8c7bd66c074172da6fdc6c359d82df72535bedb8f0363aec4e830292315ee768",
+          "document_id": "lecture/04-AVL树旋转.md",
+          "kp_id": null,
+          "source": "04-AVL树旋转.md",
+          "section": "AVL 树与平衡旋转 / 更新高度",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "441c0a349a87d0127993cc1aea5d5c87619906bcb971dd4e699519320e1b6a7f",
+          "document_id": "kp/ds-04-01-平衡因子与四种旋转.md",
+          "kp_id": "ds-04-01",
+          "source": "ds-04-01-平衡因子与四种旋转.md",
+          "section": "典型错误 / 错误 2：LR 型只做一次旋转",
+          "retrieval": "lexical",
+          "distance": 0.031746031746031855
+        }
+      ],
+      "latency_ms": 5.016
+    },
+    {
+      "id": "kp12",
+      "query": "AVL 插入后为什么要从插入位置向上更新高度？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-04-02",
+        "source:05-树旋转失衡.md"
+      ],
+      "matched": [
+        "source:05-树旋转失衡.md"
+      ],
+      "hit": true,
+      "recall": 0.5,
+      "reciprocal_rank": 0.5,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "8c7bd66c074172da6fdc6c359d82df72535bedb8f0363aec4e830292315ee768",
+          "document_id": "lecture/04-AVL树旋转.md",
+          "kp_id": null,
+          "source": "04-AVL树旋转.md",
+          "section": "AVL 树与平衡旋转 / 更新高度",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "edae8cfefb1f6d73b2324f37c493e9976449a7401f33e5bb5f69bf6ca0d5f558",
+          "document_id": "buglib/05-树旋转失衡.md",
+          "kp_id": null,
+          "source": "05-树旋转失衡.md",
+          "section": "AVL 树旋转后仍失衡（新根未接回 / 高度未更新） / 预防",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "f97fbf1760f6ae0c797395161c0e64b0213bbc6da99c39c82cbe06b4bc540514",
+          "document_id": "buglib/05-树旋转失衡.md",
+          "kp_id": null,
+          "source": "05-树旋转失衡.md",
+          "section": "AVL 树旋转后仍失衡（新根未接回 / 高度未更新） / 现象",
+          "retrieval": "lexical",
+          "distance": 0.031746031746031855
+        }
+      ],
+      "latency_ms": 4.84
+    },
+    {
+      "id": "kp13",
+      "query": "快速排序的分区结束后，枢轴两侧应该满足什么条件？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-05-01",
+        "source:05-排序.md"
+      ],
+      "matched": [
+        "kp:ds-05-01",
+        "source:05-排序.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "deaf8f5499fb15a4b629f3f7ef775fcb7d778afc30096f8274cf7ca1979366ba",
+          "document_id": "lecture/05-排序.md",
+          "kp_id": null,
+          "source": "05-排序.md",
+          "section": "排序算法 / 快排的分区思想",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "5c58f11f38ae3b239860364479176d6920722650dde0d217aafebad0f1ef0fae",
+          "document_id": "kp/ds-05-01-快速排序的划分过程.md",
+          "kp_id": "ds-05-01",
+          "source": "ds-05-01-快速排序的划分过程.md",
+          "section": "概念",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "0ab3b78b708d07cb4752220d297848730fe1c29c82daa8b6aa9de83e5a417e92",
+          "document_id": "kp/ds-05-01-快速排序的划分过程.md",
+          "kp_id": "ds-05-01",
+          "source": "ds-05-01-快速排序的划分过程.md",
+          "section": "典型错误 / 错误 4：基准归位时交换错对象，左边的元素比基准还大",
+          "retrieval": "lexical",
+          "distance": 0.031746031746031855
+        }
+      ],
+      "latency_ms": 4.827
+    },
+    {
+      "id": "kp14",
+      "query": "归并排序合并两个有序区间时，如何处理剩余元素？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-05-02",
+        "source:05-排序.md"
+      ],
+      "matched": [
+        "kp:ds-05-02",
+        "source:05-排序.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "e5a2ee8f6add986002563e0dc57abc70344f77ca3ef10a321463aae9fd8d0923",
+          "document_id": "kp/ds-05-02-归并排序与分治.md",
+          "kp_id": "ds-05-02",
+          "source": "ds-05-02-归并排序与分治.md",
+          "section": "分级练习 / 练习 1：手工合并两个有序段（难度：2）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "3a67494bbdd7705378119fc1c7216ab3b4e93fd7ffe138f7169d8a9fdaeb757a",
+          "document_id": "kp/ds-05-02-归并排序与分治.md",
+          "kp_id": "ds-05-02",
+          "source": "ds-05-02-归并排序与分治.md",
+          "section": "概念",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "52372a9dad979a77f7c9a8fe50b1e6e3387bf6459be1e814204e230ffbe088b0",
+          "document_id": "lecture/05-排序.md",
+          "kp_id": null,
+          "source": "05-排序.md",
+          "section": "排序算法 / 归并的核心",
+          "retrieval": "lexical",
+          "distance": 0.06153846153846154
+        }
+      ],
+      "latency_ms": 4.962
+    },
+    {
+      "id": "kp15",
+      "query": "堆排序取出最大元素后，为什么还需要向下调整？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-05-03",
+        "source:05-排序.md"
+      ],
+      "matched": [
+        "kp:ds-05-03",
+        "source:05-排序.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "5e13a3b1ed5ea6f67b215baa4d196ec136aac9243f8277f9817cb679239e5cae",
+          "document_id": "kp/ds-05-03-堆与堆排序.md",
+          "kp_id": "ds-05-03",
+          "source": "ds-05-03-堆与堆排序.md",
+          "section": "典型错误 / 错误 3：排序阶段下滤传的堆大小还是 n",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "5ce4c78ba0451a6b1c6730148c3c87c38e2ce1af3a4ed4909f9411d84e4e02fa",
+          "document_id": "kp/ds-05-03-堆与堆排序.md",
+          "kp_id": "ds-05-03",
+          "source": "ds-05-03-堆与堆排序.md",
+          "section": "概念",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "5989eb526f9075b8f3e38d096f18839d6e7a179249c2bf4cb80560a58569c575",
+          "document_id": "lecture/05-排序.md",
+          "kp_id": null,
+          "source": "05-排序.md",
+          "section": "排序算法 / 易错点与考点",
+          "retrieval": "lexical",
+          "distance": 0.031746031746031855
+        }
+      ],
+      "latency_ms": 4.744
+    },
+    {
+      "id": "kp16",
+      "query": "二分查找的左闭右闭区间，循环边界为什么是 left <= right？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-06-01",
+        "source:06-查找.md"
+      ],
+      "matched": [
+        "kp:ds-06-01",
+        "source:06-查找.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "d6ee139debd6b52f82215ef0bfdb01bac1cfa9e3d086afaa6f6928dec82919d7",
+          "document_id": "kp/ds-06-01-二分查找的边界处理.md",
+          "kp_id": "ds-06-01",
+          "source": "ds-06-01-二分查找的边界处理.md",
+          "section": "分级练习 / 练习 1：补全闭区间二分查找（难度：2）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "4c0ed4bdeb50ec5db091c4e54e6ce2abcf574dcb11d3891733c848944d77e5f2",
+          "document_id": "kp/ds-06-01-二分查找的边界处理.md",
+          "kp_id": "ds-06-01",
+          "source": "ds-06-01-二分查找的边界处理.md",
+          "section": "分级练习 / 练习 1：补全闭区间二分查找（难度：2）",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "eae3f4e07ce4360635b0cebc8f111dbf001f2253526bd0c613aac361a51bbb21",
+          "document_id": "lecture/06-查找.md",
+          "kp_id": null,
+          "source": "06-查找.md",
+          "section": "查找 / 二分查找",
+          "retrieval": "lexical",
+          "distance": 0.20779220779220775
+        }
+      ],
+      "latency_ms": 4.794
+    },
+    {
+      "id": "kp17",
+      "query": "哈希表的开放定址和链地址法怎样处理冲突？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-06-02",
+        "source:06-查找.md"
+      ],
+      "matched": [
+        "kp:ds-06-02",
+        "source:06-查找.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "d24b002505b73a73000c8b0cd8f1106117a03ddf938247be49edc8fe54b06dcc",
+          "document_id": "kp/ds-06-02-哈希表与冲突处理.md",
+          "kp_id": "ds-06-02",
+          "source": "ds-06-02-哈希表与冲突处理.md",
+          "section": "分级练习 / 练习 3：设计链地址法并处理扩容 rehash（难度：4）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "f657c0a434aa27d3f4a2f41d654364d2db589f2eb6ef77ecf437001942973235",
+          "document_id": "kp/ds-06-02-哈希表与冲突处理.md",
+          "kp_id": "ds-06-02",
+          "source": "ds-06-02-哈希表与冲突处理.md",
+          "section": "分级练习 / 练习 3：设计链地址法并处理扩容 rehash（难度：4）",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "f6cf670b9fa5905282d52798eb8ac3961a94cbec31a4f87860d8370a612faa0a",
+          "document_id": "lecture/06-查找.md",
+          "kp_id": null,
+          "source": "06-查找.md",
+          "section": "查找 / 哈希查找",
+          "retrieval": "lexical",
+          "distance": 0.1527777777777779
+        }
+      ],
+      "latency_ms": 4.454
+    },
+    {
+      "id": "kp18",
+      "query": "图的深度优先遍历和广度优先遍历分别使用什么辅助结构？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-07-01",
+        "source:07-图.md"
+      ],
+      "matched": [
+        "kp:ds-07-01"
+      ],
+      "hit": true,
+      "recall": 0.5,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "e260421458dde2f9994eb93c0da7cfd0324ff4b03ef5588f81b4fa728738d69b",
+          "document_id": "kp/ds-07-01-图的存储与DFS、BFS.md",
+          "kp_id": "ds-07-01",
+          "source": "ds-07-01-图的存储与DFS、BFS.md",
+          "section": "分级练习 / 练习 2：写出从 1 号顶点出发的 DFS 与 BFS 访问序列（难度：3）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "5a9d16ba980661ad032c444162a612a23d33d4eb19ed26587fda4e2c054fb7f6",
+          "document_id": "kp/ds-07-01-图的存储与DFS、BFS.md",
+          "kp_id": "ds-07-01",
+          "source": "ds-07-01-图的存储与DFS、BFS.md",
+          "section": "分级练习 / 练习 2：写出从 1 号顶点出发的 DFS 与 BFS 访问序列（难度：3）",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "6a9b18bb20dd7d4fb02758af2f0db851c89a1a36597eeb3a1c96e62d925a28e3",
+          "document_id": "lecture/03-二叉树与BST.md",
+          "kp_id": null,
+          "source": "03-二叉树与BST.md",
+          "section": "二叉树与二叉搜索树（BST） / 二叉树基本性质",
+          "retrieval": "lexical",
+          "distance": 0.17567567567567566
+        }
+      ],
+      "latency_ms": 4.799
+    },
+    {
+      "id": "kp19",
+      "query": "Dijkstra 算法为什么不能直接处理负权边？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-07-02",
+        "source:07-图.md"
+      ],
+      "matched": [
+        "kp:ds-07-02"
+      ],
+      "hit": true,
+      "recall": 0.5,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "a221b75daefd5dcdd094ff0b2d59febff242ba07bb375306cd870c00c68578b3",
+          "document_id": "kp/ds-07-02-最短路径 Dijkstra.md",
+          "kp_id": "ds-07-02",
+          "source": "ds-07-02-最短路径 Dijkstra.md",
+          "section": "分级练习 / 练习 3：负权边为什么让 Dijkstra 出错（难度：4）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "aadfb5b64ad68f5dea35c512439d6238f87c5e18e70e5ae47aa9a8203775efc4",
+          "document_id": "kp/ds-07-02-最短路径 Dijkstra.md",
+          "kp_id": "ds-07-02",
+          "source": "ds-07-02-最短路径 Dijkstra.md",
+          "section": "分级练习 / 练习 3：负权边为什么让 Dijkstra 出错（难度：4）",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "52372a9dad979a77f7c9a8fe50b1e6e3387bf6459be1e814204e230ffbe088b0",
+          "document_id": "lecture/05-排序.md",
+          "kp_id": null,
+          "source": "05-排序.md",
+          "section": "排序算法 / 归并的核心",
+          "retrieval": "lexical",
+          "distance": 0.06153846153846154
+        }
+      ],
+      "latency_ms": 4.649
+    },
+    {
+      "id": "kp20",
+      "query": "频繁随机访问和频繁插入删除时，顺序表与链表应该如何取舍？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-08-01",
+        "source:08-线性表.md"
+      ],
+      "matched": [
+        "kp:ds-08-01",
+        "source:08-线性表.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "55e989f5d6f3c010cf88283ea41dc64fefebbc406bdae0320e677df0338d3711",
+          "document_id": "lecture/08-线性表.md",
+          "kp_id": null,
+          "source": "08-线性表.md",
+          "section": "线性表（顺序表） / 易错点与考点",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "7b66c5ebf4f4a5dfdcedd981bd19ee23a85ad58786c9dbf90f4e2157ac2796cf",
+          "document_id": "kp/ds-08-01-顺序表与链表的对比与选择.md",
+          "kp_id": "ds-08-01",
+          "source": "ds-08-01-顺序表与链表的对比与选择.md",
+          "section": "典型错误 / 错误 1：说「链表插入删除是 O(1)」，忽略找位置的代价",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "c300eb93872c2dcc00396e95ee19d4e3eeb0e5dae9c4a9d502021121bfd4295a",
+          "document_id": "lecture/08-线性表.md",
+          "kp_id": null,
+          "source": "08-线性表.md",
+          "section": "线性表（顺序表） / 顺序表",
+          "retrieval": "lexical",
+          "distance": 0.031746031746031855
+        }
+      ],
+      "latency_ms": 5.736
+    },
+    {
+      "id": "bug01",
+      "query": "释放内存后另一个指针仍然访问原地址，为什么会随机崩溃？",
+      "answerable": true,
+      "expected": [
+        "source:01-指针悬空.md"
+      ],
+      "matched": [
+        "source:01-指针悬空.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "5ddfb4a7441c40b70949361e796e23de2415dcd27f5eb3aeb6119b95d81903ac",
+          "document_id": "buglib/01-指针悬空.md",
+          "kp_id": null,
+          "source": "01-指针悬空.md",
+          "section": "悬空指针（Dangling Pointer） / 原因",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "9e09ee77ba5832f8c86d16d93fde9e4d49308a156126f711f5cf7b8a8989c870",
+          "document_id": "buglib/01-指针悬空.md",
+          "kp_id": null,
+          "source": "01-指针悬空.md",
+          "section": "悬空指针（Dangling Pointer） / 现象",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "b5c70ada48bb3432139164f97e517ba5d24d566a05fca38cb5ed3204e3d74015",
+          "document_id": "kp/ds-01-02-单链表插入与删除.md",
+          "kp_id": "ds-01-02",
+          "source": "ds-01-02-单链表插入与删除.md",
+          "section": "典型错误 / 错误 2：删除结点只跨指针，没有释放内存",
+          "retrieval": "lexical",
+          "distance": 0.031746031746031855
+        }
+      ],
+      "latency_ms": 5.176
+    },
+    {
+      "id": "bug02",
+      "query": "free(p) 后 p != NULL 仍为真，再次 free 出现 double free，原因是什么？",
+      "answerable": true,
+      "expected": [
+        "source:01-指针悬空.md",
+        "source:02-free后未置NULL.md"
+      ],
+      "matched": [
+        "source:02-free后未置NULL.md"
+      ],
+      "hit": true,
+      "recall": 0.5,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "cd1737f498faddd87863d155cf7a9627cf75b0fb03c4435af11980fee3189fea",
+          "document_id": "buglib/02-free后未置NULL.md",
+          "kp_id": null,
+          "source": "02-free后未置NULL.md",
+          "section": "free/delete 后未置 NULL / 现象",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "3491a906d494244e6fec1989874cd04725c00dc81a7e86cfde839658bf1f774f",
+          "document_id": "buglib/02-free后未置NULL.md",
+          "kp_id": null,
+          "source": "02-free后未置NULL.md",
+          "section": "free/delete 后未置 NULL / 原因",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "66c30da56b08d76ef55956ea06aa95996017617f93bba77b68c3b6d26ac43ff9",
+          "document_id": "kp/ds-01-02-单链表插入与删除.md",
+          "kp_id": "ds-01-02",
+          "source": "ds-01-02-单链表插入与删除.md",
+          "section": "典型错误 / 错误 3：删除表尾或空表时解引用空指针",
+          "retrieval": "lexical",
+          "distance": 0.06153846153846154
+        }
+      ],
+      "latency_ms": 4.911
+    },
+    {
+      "id": "bug03",
+      "query": "插入链表后 q->next 指向 q 自己，后半条链表丢失了。",
+      "answerable": true,
+      "expected": [
+        "kp:ds-01-02",
+        "source:03-链表断链.md"
+      ],
+      "matched": [
+        "kp:ds-01-02"
+      ],
+      "hit": true,
+      "recall": 0.5,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "4a9188a80d886dab47072566f0dd2a234dc34f0dd71a5cf524c5ff3ac718fea4",
+          "document_id": "kp/ds-01-02-单链表插入与删除.md",
+          "kp_id": "ds-01-02",
+          "source": "ds-01-02-单链表插入与删除.md",
+          "section": "概念",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "8497474905f2cac4b90972dbf9514c6a8df84fde8746ff29e218e5d3b7480e91",
+          "document_id": "lecture/01-链表.md",
+          "kp_id": null,
+          "source": "01-链表.md",
+          "section": "链表（单链表 / 双链表 / 循环链表） / 单链表插入的关键顺序",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "5b5ac5c5a5877bc5e1e27410952efaa25e9e6082cd07b4277d79980fbc57dd8c",
+          "document_id": "kp/ds-01-02-单链表插入与删除.md",
+          "kp_id": "ds-01-02",
+          "source": "ds-01-02-单链表插入与删除.md",
+          "section": "典型错误 / 错误 1：插入时两条赋值写反，链表出现自环",
+          "retrieval": "lexical",
+          "distance": 0.031746031746031855
+        }
+      ],
+      "latency_ms": 4.963
+    },
+    {
+      "id": "bug04",
+      "query": "循环 malloc 后没有配对 free，程序内存越来越大，怎么定位？",
+      "answerable": true,
+      "expected": [
+        "source:04-内存泄漏.md"
+      ],
+      "matched": [
+        "source:04-内存泄漏.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "d841cc57708e934c12bdd8f9ec72747dd230d24402176e4b163a27be34cad019",
+          "document_id": "buglib/04-内存泄漏.md",
+          "kp_id": null,
+          "source": "04-内存泄漏.md",
+          "section": "内存泄漏（Memory Leak） / 如何定位",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "7d805536e709485a671b6440ce6e5451637289f69f1beaf4a370fd869d42cfa5",
+          "document_id": "buglib/04-内存泄漏.md",
+          "kp_id": null,
+          "source": "04-内存泄漏.md",
+          "section": "内存泄漏（Memory Leak） / 原因",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "512c40a4ae3feaf3111bb3ad9f7c4d313910c314b79f955eaea9771c3e1ab133",
+          "document_id": "buglib/02-free后未置NULL.md",
+          "kp_id": null,
+          "source": "02-free后未置NULL.md",
+          "section": "free/delete 后未置 NULL / 如何定位",
+          "retrieval": "lexical",
+          "distance": 0.031746031746031855
+        }
+      ],
+      "latency_ms": 5.115
+    },
+    {
+      "id": "bug05",
+      "query": "AVL 旋转返回了新根，但父结点没接回去，为什么树还是失衡？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-04-02",
+        "source:05-树旋转失衡.md"
+      ],
+      "matched": [
+        "source:05-树旋转失衡.md"
+      ],
+      "hit": true,
+      "recall": 0.5,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "28b7770bc21e98cb28494a6fa53bd5137d285ed229f03d161df137f34e03c39f",
+          "document_id": "buglib/05-树旋转失衡.md",
+          "kp_id": null,
+          "source": "05-树旋转失衡.md",
+          "section": "AVL 树旋转后仍失衡（新根未接回 / 高度未更新） / 原因",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "edae8cfefb1f6d73b2324f37c493e9976449a7401f33e5bb5f69bf6ca0d5f558",
+          "document_id": "buglib/05-树旋转失衡.md",
+          "kp_id": null,
+          "source": "05-树旋转失衡.md",
+          "section": "AVL 树旋转后仍失衡（新根未接回 / 高度未更新） / 预防",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "b871ce8656f7885c9b2df19b48d0c4f2a7c39fc73517de1192bcf442bbeff22c",
+          "document_id": "lecture/04-AVL树旋转.md",
+          "kp_id": null,
+          "source": "04-AVL树旋转.md",
+          "section": "AVL 树与平衡旋转 / 易错点与考点",
+          "retrieval": "lexical",
+          "distance": 0.06153846153846154
+        }
+      ],
+      "latency_ms": 5.684
+    },
+    {
+      "id": "bug06",
+      "query": "递归函数没有终止条件，为什么出现栈溢出？",
+      "answerable": true,
+      "expected": [
+        "source:06-递归基线缺失.md"
+      ],
+      "matched": [
+        "source:06-递归基线缺失.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 0.5,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "ab32eb4122233d250cbd2ecced89bd3480c9a389b40026207335f94f81aa3aa3",
+          "document_id": "lecture/02-栈与队列.md",
+          "kp_id": null,
+          "source": "02-栈与队列.md",
+          "section": "栈与队列 / 栈（Stack）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "643d8dc97ac0fd1e20b15c80d6b73cc63f632c83315a6bafe9784aee87c15374",
+          "document_id": "buglib/06-递归基线缺失.md",
+          "kp_id": null,
+          "source": "06-递归基线缺失.md",
+          "section": "递归基线缺失（无限递归 / 空指针） / 现象",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "21791d0a4f89a2e33a39862bba94440602d3a8164e428e769b4d0d23123acd66",
+          "document_id": "buglib/06-递归基线缺失.md",
+          "kp_id": null,
+          "source": "06-递归基线缺失.md",
+          "section": "递归基线缺失（无限递归 / 空指针） / 原因",
+          "retrieval": "lexical",
+          "distance": 0.031746031746031855
+        }
+      ],
+      "latency_ms": 4.908
+    },
+    {
+      "id": "alias01",
+      "query": "BST 插入遇到相同键值时应该怎么处理？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-03-03",
+        "source:03-二叉树与BST.md"
+      ],
+      "matched": [
+        "kp:ds-03-03",
+        "source:03-二叉树与BST.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "1911ea355e21f63a1e02c441195d9000a5bb59b271fe13567b1a9379dbed68bf",
+          "document_id": "lecture/03-二叉树与BST.md",
+          "kp_id": null,
+          "source": "03-二叉树与BST.md",
+          "section": "二叉树与二叉搜索树（BST） / 二叉搜索树（BST）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "6b42a80e73d7b8b76376195a1f4b5afdfff7e93e90cf6bb7b056cbd091db388e",
+          "document_id": "lecture/03-二叉树与BST.md",
+          "kp_id": null,
+          "source": "03-二叉树与BST.md",
+          "section": "二叉树与二叉搜索树（BST） / BST 插入",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "344920da1f713a741c00ee292199b253da8a6a1ffaea6ef75939001f3b605410",
+          "document_id": "kp/ds-03-03-二叉排序树的查找与插入.md",
+          "kp_id": "ds-03-03",
+          "source": "ds-03-03-二叉排序树的查找与插入.md",
+          "section": "典型错误 / 错误 3：不处理相等值，中序不再是严格升序",
+          "retrieval": "lexical",
+          "distance": 0.0757575757575758
+        }
+      ],
+      "latency_ms": 5.107
+    },
+    {
+      "id": "alias02",
+      "query": "BFS 和 DFS 在有环的图中为什么需要 visited？",
+      "answerable": true,
+      "expected": [
+        "kp:ds-07-01",
+        "source:07-图.md"
+      ],
+      "matched": [
+        "kp:ds-07-01"
+      ],
+      "hit": true,
+      "recall": 0.5,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 0.6666666666666666,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "5a9d16ba980661ad032c444162a612a23d33d4eb19ed26587fda4e2c054fb7f6",
+          "document_id": "kp/ds-07-01-图的存储与DFS、BFS.md",
+          "kp_id": "ds-07-01",
+          "source": "ds-07-01-图的存储与DFS、BFS.md",
+          "section": "分级练习 / 练习 2：写出从 1 号顶点出发的 DFS 与 BFS 访问序列（难度：3）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "9faab76cca00e0359e6bdba556e1bdb589c8750c83bb9944ee8dc82d0729b5c1",
+          "document_id": "kp/ds-07-01-图的存储与DFS、BFS.md",
+          "kp_id": "ds-07-01",
+          "source": "ds-07-01-图的存储与DFS、BFS.md",
+          "section": "分级练习 / 练习 3：统计无向图的连通分量个数（难度：3）",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "61448ccb4f86f1374c7b1ce926c1f2e020c46d547a4989342e7e376f6d8ccb97",
+          "document_id": "kp/ds-01-03-单链表的反转与快慢指针.md",
+          "kp_id": "ds-01-03",
+          "source": "ds-01-03-单链表的反转与快慢指针.md",
+          "section": "分级练习 / 练习 2：判断有环并返回环的入口（难度：4）",
+          "retrieval": "lexical",
+          "distance": 0.1527777777777779
+        }
+      ],
+      "latency_ms": 4.787
+    },
+    {
+      "id": "long01",
+      "query": "我正在写一个循环队列，数组长度是 capacity。插入很多次以后 rear 会绕回数组开头，front 有时候也在移动。我不知道应该怎样区分队列为空和队列已满，尤其想理解为什么常见实现会保留一个空位置。",
+      "answerable": true,
+      "expected": [
+        "kp:ds-02-02",
+        "source:02-栈与队列.md"
+      ],
+      "matched": [
+        "kp:ds-02-02",
+        "source:02-栈与队列.md"
+      ],
+      "hit": true,
+      "recall": 1.0,
+      "reciprocal_rank": 1.0,
+      "returned_precision": 1.0,
+      "correct_abstention": null,
+      "results": [
+        {
+          "chunk_id": "5dd5b43b80f74eb0d07eafa7b8f05213127730fb9026639a3dcc285420512316",
+          "document_id": "lecture/02-栈与队列.md",
+          "kp_id": null,
+          "source": "02-栈与队列.md",
+          "section": "栈与队列 / 队列（Queue）",
+          "retrieval": "lexical",
+          "distance": 0.0
+        },
+        {
+          "chunk_id": "aeb6018b702d0701a0ac5dbd80fbf87a8d2383acd37487726470b5c9643fb26b",
+          "document_id": "kp/ds-02-02-循环队列的判空与判满.md",
+          "kp_id": "ds-02-02",
+          "source": "ds-02-02-循环队列的判空与判满.md",
+          "section": "分级练习 / 练习 3：遍历循环队列并输出长度（难度：2）",
+          "retrieval": "lexical",
+          "distance": 0.016129032258064613
+        },
+        {
+          "chunk_id": "6ba7fee4cc3082c55022a54556a65ba69521a9ec5a6481eed68cf12fe19aac79",
+          "document_id": "kp/ds-02-02-循环队列的判空与判满.md",
+          "kp_id": "ds-02-02",
+          "source": "ds-02-02-循环队列的判空与判满.md",
+          "section": "分级练习 / 练习 1：补全入队与出队（难度：2）",
+          "retrieval": "lexical",
+          "distance": 0.031746031746031855
+        }
+      ],
+      "latency_ms": 6.59
+    },
+    {
+      "id": "none01",
+      "query": "明天杭州会下雨吗？",
+      "answerable": false,
+      "expected": [],
+      "matched": [],
+      "hit": null,
+      "recall": null,
+      "reciprocal_rank": null,
+      "returned_precision": null,
+      "correct_abstention": true,
+      "results": [],
+      "latency_ms": 4.356
+    },
+    {
+      "id": "none02",
+      "query": "帮我推荐一家意大利餐厅。",
+      "answerable": false,
+      "expected": [],
+      "matched": [],
+      "hit": null,
+      "recall": null,
+      "reciprocal_rank": null,
+      "returned_precision": null,
+      "correct_abstention": true,
+      "results": [],
+      "latency_ms": 4.046
+    },
+    {
+      "id": "none03",
+      "query": "量子纠缠如何用于黑洞信息悖论？",
+      "answerable": false,
+      "expected": [],
+      "matched": [],
+      "hit": null,
+      "recall": null,
+      "reciprocal_rank": null,
+      "returned_precision": null,
+      "correct_abstention": true,
+      "results": [],
+      "latency_ms": 4.887
+    }
+  ],
+  "limits": "检索文档相关性标注；不评估大模型答案质量。延迟包含首个请求的冷启动，不代表线上并发性能。",
+  "dataset": "/workspace/Heuristic-agent/backend/data/rag_eval.jsonl",
+  "dataset_sha256": "2e3a908a1bfc55b8e2595e296b29cc4f6bed2e21a25b46f0ea5f2bd0ce97c589"
+}

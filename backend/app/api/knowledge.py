@@ -130,3 +130,15 @@ def search_knowledge(q: str = Query(...), top_k: int = Query(20, ge=1, le=100)):
                     break
 
     return {"items": items, "total": len(items)}
+
+
+@router.get("/knowledge/retrieval/status")
+def retrieval_status():
+    """检索模式、索引新旧与向量后端状态（不返回查询或模型密钥）。"""
+    return rag.retrieval_status()
+
+
+@router.post("/knowledge/retrieval/reset")
+def reset_retrieval(_: dict = Depends(require_teacher)):
+    """解除模型失败冷却；下一次检索重试向量，旧索引保持不变。"""
+    return rag.reset_retrieval()

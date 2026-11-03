@@ -8,12 +8,15 @@
 from __future__ import annotations
 
 from app.config import DATA_DIR, EMBEDDING_MODEL
+from threading import RLock
+
+_LOAD_LOCK = RLock()
 
 _model = None
 _backend: str | None = None
 
 
-def _load():
+def _load_unlocked():
     global _model, _backend
     if _model is not None:
         return _model
@@ -35,6 +38,23 @@ def _load():
     _model = SentenceTransformer(EMBEDDING_MODEL)
     _backend = "torch"
     return _model
+
+
+def _load():
+    with _LOAD_LOCK:
+        return _load_unlocked()
+
+
+def model_signature() -> str:
+    """索引复用边界：模型、实际后端、文档预处理与维度归一化约定。"""
+    _load()
+    return f"{EMBEDDING_MODEL}|{_backend}|normalized-v1"
+
+
+def embed_query(query: str) -> list[float]:
+    """BGE 中文检索推荐 query 指令；文档不添加指令。"""
+    prefix = "为这个句子生成表示以用于检索相关文章：" if 'bge' in EMBEDDING_MODEL.lower() else ''
+    return embed_texts([prefix + query])[0]
 
 
 def get_embedder():
