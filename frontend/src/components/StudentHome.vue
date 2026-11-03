@@ -1,10 +1,15 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onActivated, ref } from 'vue'
 import { listAssignments, listClasses, myMastery } from '../api.js'
-import { state } from '../session.js'
+import { state, navigateTo } from '../session.js'
 import { chapterLabel } from '../kp.js'
 
-const emit = defineEmits(['goto', 'start-assignment'])
+import AppIcon from './AppIcon.vue'
+import AsyncState from './AsyncState.vue'
+import OnboardingSteps from './OnboardingSteps.vue'
+import { needsWork, sortAssignments } from '../assignments.js'
+const emit = defineEmits(['goto', 'start-assignment', 'open-settings'])
+const error = ref('')
 
 const loading = ref(true)
 const classes = ref([])
@@ -12,7 +17,11 @@ const assignments = ref([])
 const mastery = ref([])
 
 const displayName = computed(
-  () => state.user?.display_name || state.user?.real_name || state.user?.username || '同学'
+  () =>
+    state.user?.display_name ||
+    state.user?.real_name ||
+    state.user?.username ||
+    '同学'
 )
 
 const greeting = computed(() => {
@@ -24,11 +33,17 @@ const greeting = computed(() => {
   return '晚上好'
 })
 
-const todos = computed(() => assignments.value.filter((item) => !item.my_submission))
+const todos = computed(() =>
+  sortAssignments(assignments.value.filter(needsWork))
+)
 const recent = computed(() =>
   assignments.value
     .filter((item) => item.my_submission)
-    .sort((a, b) => String(b.my_submission.submitted_at).localeCompare(String(a.my_submission.submitted_at)))
+    .sort((a, b) =>
+      String(b.my_submission.submitted_at).localeCompare(
+        String(a.my_submission.submitted_at)
+      )
+    )
     .slice(0, 4)
 )
 const weakPoints = computed(() =>
@@ -36,24 +51,34 @@ const weakPoints = computed(() =>
 )
 
 const submittedCount = computed(
-  () => assignments.value.filter((item) => item.my_submission).length
+  () =>
+    assignments.value.filter((item) => item.my_submission && !needsWork(item))
+      .length
 )
 
 async function load() {
   loading.value = true
-  const data = await listClasses()
-  classes.value = data.joined || []
-  const all = []
-  for (const cls of classes.value) {
-    const items = await listAssignments(cls.id)
-    for (const item of items) {
-      all.push({ ...item, class_name: cls.name, class_id: cls.id })
-    }
+  error.value = ''
+  try {
+    const [data, masteryData] = await Promise.all([listClasses(), myMastery()])
+    classes.value = data.joined || []
+    const groups = await Promise.all(
+      classes.value.map(async (cls) => {
+        const items = await listAssignments(cls.id)
+        return items.map((item) => ({
+          ...item,
+          class_name: cls.name,
+          class_id: cls.id,
+        }))
+      })
+    )
+    assignments.value = groups.flat()
+    mastery.value = masteryData.items || []
+  } catch (e) {
+    error.value = e.message || '学习数据加载失败'
+  } finally {
+    loading.value = false
   }
-  assignments.value = all
-  const masteryData = await myMastery()
-  mastery.value = masteryData.items || []
-  loading.value = false
 }
 
 function formatTime(value) {
@@ -65,7 +90,7 @@ function openAssignment(item) {
   if (item.type === 'code') {
     emit('start-assignment', { ...item, class_name: item.class_name })
   } else {
-    emit('goto', 'homework')
+    navigateTo('homework', { classId: item.class_id, assignmentId: item.id })
   }
 }
 
@@ -76,40 +101,65 @@ function statusLabel(item) {
   return '已提交'
 }
 
-onMounted(load)
+onActivated(load)
 </script>
 
 <template>
-  <div v-if="loading" class="empty">加载中…</div>
+  <AsyncState
+    v-if="loading || error"
+    :loading="loading"
+    :error="error"
+    @retry="load"
+  />
 
   <div v-else class="home">
     <div class="hello">
+      <div class="hero-label">一点点理解，一步步进步</div>
       <h3>{{ greeting }}，{{ displayName }}</h3>
       <p v-if="!classes.length">还没有加入班级，先向老师要一个邀请码。</p>
-      <p v-else-if="todos.length">今天有 {{ todos.length }} 个任务待完成，加油。</p>
+      <p v-else-if="todos.length">
+        还有 {{ todos.length }} 个任务待完成，加油。
+      </p>
       <p v-else>任务都完成了，可以去学习助手巩固一下。</p>
+      <button
+        class="hero-action"
+        @click="emit('goto', todos.length ? 'homework' : 'assistant')"
+      >
+        {{ todos.length ? '继续完成任务' : '开始一次提问' }}
+        <AppIcon name="arrow" :size="18" />
+      </button>
     </div>
 
     <div class="stats">
       <div class="stat">
-        <b>{{ todos.length }}</b>
+        <span class="stat-icon"><AppIcon name="homework" /></span
+        ><b>{{ todos.length }}</b>
         <span>待完成任务</span>
       </div>
       <div class="stat">
-        <b>{{ submittedCount }}</b>
+        <span class="stat-icon green"><AppIcon name="check" /></span
+        ><b>{{ submittedCount }}</b>
         <span>已提交</span>
       </div>
       <div class="stat">
-        <b>{{ classes.length }}</b>
+        <span class="stat-icon purple"><AppIcon name="workspace" /></span
+        ><b>{{ classes.length }}</b>
         <span>我的班级</span>
       </div>
     </div>
 
+    <OnboardingSteps
+      :has-class="!!classes.length"
+      :has-assignment="recent.length > 0"
+      @open-settings="emit('open-settings')"
+    />
     <div class="columns">
       <section class="panel">
         <div class="panel-head">
           <h4>待办任务</h4>
-          <button class="link" @click="emit('goto', 'homework')">全部任务 →</button>
+          <button class="link" @click="emit('goto', 'homework')">
+            全部任务 →
+          </button>
         </div>
 
         <div v-if="!todos.length" class="empty small">
@@ -120,6 +170,11 @@ onMounted(load)
           <div class="row-main">
             <div class="row-title">
               {{ item.title }}
+              <span
+                v-if="item.my_submission?.status === 'returned'"
+                class="badge returned"
+                >待重做</span
+              >
               <span v-if="item.is_overdue" class="badge overdue">已截止</span>
             </div>
             <div class="row-meta">
@@ -127,7 +182,19 @@ onMounted(load)
               <span>截止 {{ formatTime(item.due_at) }}</span>
             </div>
           </div>
-          <button class="primary" @click="openAssignment(item)">去完成</button>
+          <button
+            class="primary"
+            :disabled="item.is_overdue && !item.allow_late"
+            @click="openAssignment(item)"
+          >
+            {{
+              item.is_overdue && !item.allow_late
+                ? '已截止'
+                : item.my_submission?.status === 'returned'
+                  ? '去重做'
+                  : '去完成'
+            }}
+          </button>
         </div>
       </section>
 
@@ -150,7 +217,13 @@ onMounted(load)
             <span class="badge" :class="item.my_submission.status">
               {{ statusLabel(item) }}
             </span>
-            <strong v-if="item.my_submission.score !== null && item.my_submission.score !== undefined" class="score">
+            <strong
+              v-if="
+                item.my_submission.score !== null &&
+                item.my_submission.score !== undefined
+              "
+              class="score"
+            >
               {{ item.my_submission.score }}
             </strong>
           </div>
@@ -169,11 +242,25 @@ onMounted(load)
       </div>
 
       <div v-for="item in weakPoints" :key="item.kp_id" class="weak-row">
-        <div class="weak-title">
+        <button
+          class="weak-title"
+          @click="
+            () => {
+              navigateTo('knowledge', { kpId: item.kp_id, query: item.title })
+            }
+          "
+        >
           <span class="kp">{{ chapterLabel(item.kp_id) }}</span>
           {{ item.title || '未命名知识点' }}
-        </div>
-        <div class="bar">
+        </button>
+        <div
+          class="bar"
+          role="progressbar"
+          :aria-label="item.title"
+          :aria-valuenow="item.score"
+          aria-valuemin="0"
+          aria-valuemax="100"
+        >
           <div class="fill" :style="{ width: `${item.score}%` }"></div>
         </div>
         <span class="weak-score">{{ item.score }}</span>
@@ -183,6 +270,148 @@ onMounted(load)
 </template>
 
 <style scoped>
+.hello {
+  position: relative;
+  padding: 28px 30px !important;
+  border-radius: var(--radius);
+  background: linear-gradient(110deg, #edf3ff, #e5edfc 70%, #d9e6fc);
+  overflow: hidden;
+  min-height: 180px;
+}
+.hello::after {
+  content: '?';
+  position: absolute;
+  right: 38px;
+  top: -26px;
+  font-size: 200px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #3264d80b;
+  transform: rotate(12deg);
+  pointer-events: none;
+}
+.hero-label {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--primary);
+  margin-bottom: 12px;
+}
+.hello h3 {
+  font-size: 25px !important;
+  letter-spacing: -0.5px;
+}
+.hello p {
+  margin-top: 8px !important;
+}
+.hero-action {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: var(--primary);
+  color: white;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 15px;
+  font-size: 12px;
+}
+.stat {
+  position: relative;
+  text-align: left !important;
+  padding: 20px 22px !important;
+  background: white !important;
+  border-radius: var(--radius) !important;
+}
+.stat b {
+  color: var(--text) !important;
+  font-size: 29px !important;
+}
+.stat-icon {
+  position: absolute;
+  right: 20px;
+  top: 24px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #edf2ff;
+  color: var(--primary);
+}
+.stat-icon.green {
+  background: #eaf7f1;
+  color: #258562;
+}
+.stat-icon.purple {
+  background: #f2edfb;
+  color: #8059bf;
+}
+.panel {
+  background: white;
+  border-radius: var(--radius) !important;
+  padding: 22px !important;
+}
+.panel-head h4 {
+  font-size: 15px !important;
+}
+.weak-title {
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 0;
+  color: var(--primary) !important;
+  white-space: normal !important;
+}
+.fill {
+  background: #e4ac5d !important;
+}
+.home {
+  gap: 20px !important;
+}
+@media (max-width: 760px) {
+  .hello {
+    padding: 24px 20px !important;
+  }
+  .hello h3 {
+    font-size: 22px !important;
+  }
+  .stat {
+    padding: 14px 12px !important;
+  }
+  .stat-icon {
+    position: static;
+    width: 30px;
+    height: 30px;
+    margin-bottom: 8px;
+  }
+  .stat b {
+    font-size: 25px !important;
+  }
+  .stat span {
+    font-size: 11px !important;
+  }
+  .stats {
+    gap: 8px !important;
+  }
+  .panel {
+    padding: 18px !important;
+  }
+  .row-meta {
+    flex-wrap: wrap;
+    gap: 3px 8px !important;
+  }
+  .weak-row {
+    flex-wrap: wrap;
+  }
+  .weak-title {
+    width: 100% !important;
+  }
+  .panel-head {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+}
+
 .home {
   display: flex;
   flex-direction: column;
@@ -198,7 +427,7 @@ onMounted(load)
 .hello p {
   margin: 0;
   font-size: 13px;
-  color: #64748b;
+  color: var(--muted);
 }
 
 .stats {
@@ -223,7 +452,7 @@ onMounted(load)
 
 .stat span {
   font-size: 12px;
-  color: #64748b;
+  color: var(--muted);
 }
 
 .columns {
@@ -254,14 +483,14 @@ onMounted(load)
 .link {
   border: none;
   background: transparent;
-  color: #3b82f6;
+  color: var(--primary);
   font-size: 12px;
   cursor: pointer;
 }
 
 .hint {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .row {
@@ -290,8 +519,8 @@ onMounted(load)
 .row-meta {
   display: flex;
   gap: 10px;
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .row-right {
@@ -301,7 +530,7 @@ onMounted(load)
 }
 
 .badge {
-  font-size: 11px;
+  font-size: 12px;
   padding: 2px 8px;
   border-radius: 999px;
   background: #f1f5f9;
@@ -348,8 +577,8 @@ onMounted(load)
 
 .kp {
   font-family: monospace;
-  font-size: 11px;
-  color: #64748b;
+  font-size: 12px;
+  color: var(--muted);
   background: #f1f5f9;
   border-radius: 4px;
   padding: 1px 5px;
@@ -381,7 +610,7 @@ onMounted(load)
   padding: 5px 12px;
   border: none;
   border-radius: 6px;
-  background: #3b82f6;
+  background: var(--primary);
   color: white;
   font-size: 12px;
   cursor: pointer;
@@ -389,7 +618,7 @@ onMounted(load)
 }
 
 .empty {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 13px;
   text-align: center;
   padding: 30px;

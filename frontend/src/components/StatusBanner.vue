@@ -1,100 +1,139 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { state } from '../session.js'
-
-const props = defineProps({
-  status: { type: Object, default: null },
-})
-
-const emit = defineEmits(['open-settings'])
-
-const knowledgeTotal = computed(() => {
-  const knowledge = props.status?.knowledge || {}
-  return Object.values(knowledge).reduce((sum, value) => sum + (Number(value) || 0), 0)
-})
-
-const keyMode = computed(() => {
-  if (state.llmKey) return '个人密钥'
-  if (props.status?.server_key) return '服务端密钥'
-  return '未配置'
-})
-
-const level = computed(() => {
-  if (!state.llmKey && !props.status?.server_key) return 'error'
-  if (props.status?.knowledge_error) return 'warn'
-  if (!knowledgeTotal.value) return 'warn'
-  return 'ok'
-})
-
-const message = computed(() => {
-  if (level.value === 'error') return '还没有可用的模型密钥：点右侧「模型设置」填入你自己的 API Key 才能对话'
-  if (props.status?.knowledge_error) return `知识库不可用（${props.status.knowledge_error}），对话与诊断仍可进行`
-  if (!knowledgeTotal.value) return '知识库还没建库：教师可在「知识库」页点一次「重新建库」'
-  return `就绪 · 知识库 ${knowledgeTotal.value} 块 · 模型 ${props.status?.model || 'deepseek-chat'}（${keyMode.value}）`
-})
+const props = defineProps({ status: { type: Object, default: null } })
+defineEmits(['open-settings', 'retry'])
+const expanded = ref(false)
+const total = computed(() =>
+  Object.values(props.status?.knowledge || {}).reduce(
+    (sum, n) => sum + (Number(n) || 0),
+    0
+  )
+)
+const level = computed(() =>
+  !props.status
+    ? 'loading'
+    : props.status.unavailable
+      ? 'warn'
+      : !state.llmKey && !props.status.server_key
+        ? 'setup'
+        : props.status.knowledge_error || !total.value
+          ? 'warn'
+          : 'ok'
+)
+const label = computed(
+  () =>
+    ({
+      loading: '正在检查服务状态',
+      setup: '开始前，连接你的 AI 助教',
+      warn: '部分服务需要检查',
+      ok: '助教已就绪',
+    })[level.value]
+)
 </script>
-
 <template>
-  <div class="banner" :class="level">
-    <span class="dot"></span>
-    <span class="text">{{ message }}</span>
-    <button class="action" @click="emit('open-settings')">
-      {{ level === 'error' ? '填写密钥' : '模型设置' }}
-    </button>
+  <div class="status-strip" :class="level">
+    <div class="status-main">
+      <span class="status-dot"></span><strong>{{ label }}</strong
+      ><span v-if="level === 'setup'" class="status-summary"
+        >配置个人密钥后，就能提问和诊断代码</span
+      ><span v-else-if="level === 'ok'" class="status-summary"
+        >随时开始你的下一次思考</span
+      >
+    </div>
+    <div class="status-actions">
+      <button v-if="level === 'setup'" @click="$emit('open-settings')">
+        配置密钥 →</button
+      ><button v-else-if="status?.unavailable" @click="$emit('retry')">
+        重新检查</button
+      ><button v-else :aria-expanded="expanded" @click="expanded = !expanded">
+        {{ expanded ? '收起' : '查看状态' }}
+      </button>
+    </div>
+    <p v-if="expanded" class="status-detail">
+      {{
+        status?.knowledge_error
+          ? '知识库暂不可用，可请教师检查或重建。'
+          : `已索引 ${total} 个知识片段。`
+      }}
+      模型：{{ status?.model || '等待检查' }}。{{
+        state.llmKey
+          ? '使用个人密钥。'
+          : status?.server_key
+            ? '使用服务端密钥。'
+            : '尚未配置个人密钥。'
+      }}
+      <button @click="$emit('open-settings')">模型设置</button>
+    </p>
   </div>
 </template>
-
 <style scoped>
-.banner {
+.status-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 13px 17px;
+  margin-bottom: 22px;
+  font-size: 12px;
+}
+.status-main {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 14px;
-  border-radius: 10px;
-  font-size: 13px;
-  margin-bottom: 16px;
-  border: 1px solid transparent;
 }
-
-.banner.ok {
-  background: #f0fdf4;
-  border-color: #bbf7d0;
-  color: #15803d;
+.status-main strong {
+  font-size: 12px;
+  font-weight: 550;
 }
-
-.banner.warn {
-  background: #fffbeb;
-  border-color: #fde68a;
-  color: #b45309;
+.status-summary {
+  color: var(--muted);
 }
-
-.banner.error {
-  background: #fef2f2;
-  border-color: #fecaca;
-  color: #b91c1c;
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
+.status-dot {
+  height: 7px;
+  width: 7px;
+  background: #2c9c79;
   border-radius: 50%;
-  background: currentColor;
   flex-shrink: 0;
 }
-
-.text {
-  flex: 1;
-  line-height: 1.5;
+.status-strip.setup {
+  background: #f0f5ff;
+  border-color: #dce6ff;
 }
-
-.action {
-  border: 1px solid currentColor;
-  background: transparent;
-  color: inherit;
-  border-radius: 6px;
-  padding: 3px 10px;
+.setup .status-dot {
+  background: var(--primary);
+}
+.warn .status-dot {
+  background: #d97706;
+}
+.loading .status-dot {
+  background: #94a3b8;
+}
+.status-actions button,
+.status-detail button {
+  border: 0;
+  background: none;
+  color: var(--primary);
   font-size: 12px;
-  cursor: pointer;
-  white-space: nowrap;
+  padding: 3px;
+}
+.status-detail {
+  flex-basis: 100%;
+  margin: 0;
+  line-height: 1.7;
+  color: var(--muted);
+}
+@media (max-width: 760px) {
+  .status-summary {
+    display: none;
+  }
+  .status-strip {
+    padding: 12px;
+    margin-bottom: 18px;
+  }
 }
 </style>

@@ -79,3 +79,7 @@ config.ini
 
 # jupyter notebook
 .ipynb_checkpoints
+
+# Playwright 本地回归产物
+frontend/test-results/
+frontend/playwright-report/

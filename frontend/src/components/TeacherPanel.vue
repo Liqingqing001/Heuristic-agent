@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onActivated, onDeactivated, ref, nextTick } from 'vue'
 import {
   classMastery,
   createAssignment,
@@ -17,6 +17,8 @@ import {
 } from '../api.js'
 import { toast } from '../toast.js'
 import { renderMarkdown } from '../markdown.js'
+import { state } from '../session.js'
+import AsyncState from './AsyncState.vue'
 import GradeModal from './GradeModal.vue'
 
 const classes = ref([])
@@ -24,6 +26,20 @@ const currentId = ref(null)
 const assignments = ref([])
 const overview = ref(null)
 const loading = ref(false)
+const loadError = ref('')
+const submissionLoading = ref(false)
+const submissionError = ref('')
+const pendingOnly = ref(false)
+const visibleSubmissions = computed(() =>
+  pendingOnly.value
+    ? submissions.value.filter((s) =>
+        ['submitted', 'analyzed'].includes(s.status)
+      )
+    : submissions.value
+)
+let classRequest = 0,
+  submissionRequest = 0,
+  handledNavigation = 0
 const message = ref('')
 const error = ref('')
 
@@ -58,31 +74,98 @@ const currentClass = computed(
 const averageRate = computed(() => {
   if (!overview.value?.assignments?.length) return 0
   const list = overview.value.assignments
-  return Math.round((list.reduce((sum, item) => sum + item.rate, 0) / list.length) * 100)
+  return Math.round(
+    (list.reduce((sum, item) => sum + item.rate, 0) / list.length) * 100
+  )
 })
 
 async function loadClasses() {
-  const data = await listClasses()
-  classes.value = data.taught || []
-  if (!currentId.value && classes.value.length) {
-    await selectClass(classes.value[0].id)
+  loading.value = true
+  loadError.value = ''
+  try {
+    const data = await listClasses()
+    classes.value = data.taught || []
+    const target = state.navigation
+    const direct =
+      target?.tab === 'workspace' && target.nonce !== handledNavigation
+    if (direct) handledNavigation = target.nonce
+    const id =
+      direct && classes.value.some((c) => c.id === target.classId)
+        ? target.classId
+        : currentId.value || classes.value[0]?.id
+    const previousAssignmentId = submissionsAssignmentId.value
+    const previousPendingOnly = pendingOnly.value
+    if (id) await selectClass(id)
+    if (!direct && previousAssignmentId) {
+      const previous = assignments.value.find(
+        (a) => a.id === previousAssignmentId
+      )
+      if (previous) {
+        await openSubmissions(previous, false)
+        pendingOnly.value = previousPendingOnly
+      }
+    }
+    if (direct && target.action === 'create') showCreateClass.value = true
+    if (direct && target.action === 'publish')
+      nextTick(() =>
+        document
+          .getElementById('publish-assignment')
+          ?.scrollIntoView({ behavior: 'smooth' })
+      )
+    if (direct && target.action === 'grading') {
+      let assignment = assignments.value.find(
+        (a) => a.id === target.assignmentId
+      )
+      if (!assignment) {
+        const groups = await Promise.all(
+          assignments.value.map(async (a) => ({
+            assignment: a,
+            submissions: await listSubmissions(a.id),
+          }))
+        )
+        assignment = groups.find((g) =>
+          g.submissions.some((s) =>
+            ['submitted', 'analyzed'].includes(s.status)
+          )
+        )?.assignment
+      }
+      if (assignment) {
+        await openSubmissions(assignment)
+        pendingOnly.value = true
+        const item = submissions.value.find((s) => s.id === target.submissionId)
+        if (item) openGrade(item)
+      }
+    }
+  } catch (e) {
+    loadError.value = e.message || '班级加载失败'
+  } finally {
+    loading.value = false
   }
 }
-
 async function selectClass(id) {
+  const request = ++classRequest
   currentId.value = id
   overview.value = null
   submissions.value = []
+  submissionsAssignmentId.value = null
   loading.value = true
-  const [items, stats, masteryData] = await Promise.all([
-    listAssignments(id),
-    getOverview(id),
-    classMastery(id),
-  ])
-  assignments.value = items
-  overview.value = stats
-  mastery.value = masteryData.items || []
-  loading.value = false
+  loadError.value = ''
+  try {
+    const [items, stats, masteryData] = await Promise.all([
+      listAssignments(id),
+      getOverview(id),
+      classMastery(id),
+    ])
+    if (request !== classRequest) return
+    assignments.value = items
+    overview.value = stats
+    mastery.value = masteryData.items || []
+  } catch (e) {
+    if (request === classRequest)
+      loadError.value = e.message || '班级数据加载失败'
+  } finally {
+    if (request === classRequest) loading.value = false
+  }
 }
 
 async function doCreateClass() {
@@ -110,7 +193,9 @@ function normalizeDue(value) {
   if (!text) return null
   // 支持 2026-12-01 23:59 / 2026/12/01 23:59 / 2026-12-01T23:59
   const normalized = text.replace(/\//g, '-').replace(' ', 'T')
-  const matched = normalized.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{1,2}):(\d{2})$/)
+  const matched = normalized.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{1,2}):(\d{2})$/
+  )
   if (!matched) return NaN
   const [, year, month, day, hour, minute] = matched
   return `${year}-${month}-${day}T${hour.padStart(2, '0')}:${minute}`
@@ -135,7 +220,7 @@ function startEdit(assignment) {
     description: assignment.description || '',
     type: assignment.type,
     kp_ids: (assignment.kp_ids || []).join(', '),
-    due_at: (assignment.due_at || '').replace('T', ' '),
+    due_at: assignment.due_at || '',
     allow_late: !!assignment.allow_late,
   }
   message.value = '正在编辑任务，改完点「保存修改」'
@@ -179,7 +264,12 @@ async function doCreateAssignment() {
 }
 
 async function removeAssignment(assignment) {
-  if (!confirm(`确定删除任务「${assignment.title}」？该任务的提交记录也会一起删除。`)) return
+  if (
+    !confirm(
+      `确定删除任务「${assignment.title}」？该任务的提交记录也会一起删除。`
+    )
+  )
+    return
   try {
     await deleteAssignment(assignment.id)
     toast('任务已删除', 'success')
@@ -193,14 +283,37 @@ async function removeAssignment(assignment) {
   }
 }
 
-async function openSubmissions(assignment) {
+async function openSubmissions(assignment, scroll = true) {
+  const request = ++submissionRequest
   submissionsTitle.value = assignment.title
   submissionsAssignmentId.value = assignment.id
-  submissions.value = await listSubmissions(assignment.id)
+  submissionLoading.value = true
+  submissionError.value = ''
+  pendingOnly.value = false
+  try {
+    const data = await listSubmissions(assignment.id)
+    if (request === submissionRequest) submissions.value = data
+  } catch (e) {
+    if (request === submissionRequest)
+      submissionError.value = e.message || '提交列表加载失败'
+  } finally {
+    if (request === submissionRequest) {
+      submissionLoading.value = false
+      if (scroll)
+        nextTick(() =>
+          document
+            .getElementById('submission-list')
+            ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        )
+    }
+  }
 }
-
 async function openDetail(item) {
-  detail.value = await getSubmission(item.id)
+  try {
+    detail.value = await getSubmission(item.id)
+  } catch (e) {
+    toast(e.message || '加载失败', 'error')
+  }
 }
 
 function closeDetail() {
@@ -213,16 +326,28 @@ function openGrade(item) {
 
 async function onGradeSaved() {
   gradeTarget.value = null
-  await selectClass(currentId.value)
-  if (submissionsAssignmentId.value) {
-    submissions.value = await listSubmissions(submissionsAssignmentId.value)
+  const assignmentId = submissionsAssignmentId.value
+  try {
+    const [stats, items, list] = await Promise.all([
+      getOverview(currentId.value),
+      listAssignments(currentId.value),
+      listSubmissions(assignmentId),
+    ])
+    overview.value = stats
+    assignments.value = items
+    submissions.value = list
+  } catch (e) {
+    toast(e.message || '刷新失败，请重新加载', 'error')
   }
 }
 
 async function openStudent(student) {
   studentLoading.value = true
   try {
-    studentDetail.value = await getStudentDetail(currentId.value, student.user_id)
+    studentDetail.value = await getStudentDetail(
+      currentId.value,
+      student.user_id
+    )
   } catch (e) {
     toast(e.message || '加载学生信息失败', 'error')
   } finally {
@@ -264,7 +389,12 @@ function statusText(status) {
   return map[status] || status
 }
 
-onMounted(loadClasses)
+onDeactivated(() => {
+  detail.value = null
+  studentDetail.value = null
+  gradeTarget.value = null
+})
+onActivated(loadClasses)
 </script>
 
 <template>
@@ -281,14 +411,28 @@ onMounted(loadClasses)
           {{ item.name }}
           <span class="count">{{ item.member_count }} 人</span>
         </button>
-        <button class="class-tab add" @click="showCreateClass = !showCreateClass">＋ 新建班级</button>
+        <button
+          class="class-tab add"
+          @click="showCreateClass = !showCreateClass"
+        >
+          ＋ 新建班级
+        </button>
       </div>
     </div>
 
     <div v-if="showCreateClass" class="card form-card">
       <div class="row">
-        <input v-model="newClassName" placeholder="班级名称，例如：数据结构 2026 春" />
-        <input v-model="newClassTerm" placeholder="学期（可选）" class="short" />
+        <input
+          aria-label="班级名称"
+          v-model="newClassName"
+          placeholder="班级名称，例如：数据结构 2026 春"
+        />
+        <input
+          aria-label="学期"
+          v-model="newClassTerm"
+          placeholder="学期（可选）"
+          class="short"
+        />
         <button class="primary" @click="doCreateClass">创建</button>
       </div>
     </div>
@@ -296,7 +440,13 @@ onMounted(loadClasses)
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="message" class="ok">{{ message }}</p>
 
-    <div v-if="!classes.length" class="empty">
+    <AsyncState
+      v-if="loading || loadError"
+      :loading="loading"
+      :error="loadError"
+      @retry="loadClasses"
+    />
+    <div v-else-if="!classes.length" class="empty">
       还没有班级。先点「＋ 新建班级」，把生成的 6 位邀请码发给学生。
     </div>
 
@@ -304,12 +454,16 @@ onMounted(loadClasses)
       <div class="class-head">
         <div>
           <h3>{{ currentClass.name }}</h3>
-          <span class="sub">{{ currentClass.term || '未填写学期' }} · {{ currentClass.member_count }} 名学生</span>
+          <span class="sub"
+            >{{ currentClass.term || '未填写学期' }} ·
+            {{ currentClass.member_count }} 名学生</span
+          >
         </div>
         <div class="head-actions">
           <button class="ghost" @click="doExport">导出成绩 CSV</button>
           <button class="invite" @click="copyCode">
-            邀请码 <strong>{{ currentClass.code }}</strong>（点击复制）
+            邀请码 <strong>{{ currentClass.code }}</strong
+            >（点击复制）
           </button>
         </div>
       </div>
@@ -333,13 +487,26 @@ onMounted(loadClasses)
       <div v-if="overview" class="two-col">
         <div class="card">
           <h4>任务提交情况</h4>
-          <div v-if="!overview.assignments.length" class="empty small">还没有任务</div>
-          <div v-for="item in overview.assignments" :key="item.id" class="progress-row">
+          <div v-if="!overview.assignments.length" class="empty small">
+            还没有任务
+          </div>
+          <div
+            v-for="item in overview.assignments"
+            :key="item.id"
+            class="progress-row"
+          >
             <div class="progress-label">
               <span>{{ item.title }}</span>
-              <span class="num">{{ item.submitted }}/{{ item.member_count }}</span>
+              <span class="num"
+                >{{ item.submitted }}/{{ item.member_count }}</span
+              >
             </div>
-            <div class="bar"><div class="fill" :style="{ width: `${Math.round(item.rate * 100)}%` }"></div></div>
+            <div class="bar">
+              <div
+                class="fill"
+                :style="{ width: `${Math.round(item.rate * 100)}%` }"
+              ></div>
+            </div>
           </div>
         </div>
 
@@ -360,7 +527,9 @@ onMounted(loadClasses)
             <div class="bar error-bar">
               <div
                 class="fill error"
-                :style="{ width: `${Math.round((item.count / overview.error_distribution[0].count) * 100)}%` }"
+                :style="{
+                  width: `${Math.round((item.count / overview.error_distribution[0].count) * 100)}%`,
+                }"
               ></div>
             </div>
           </div>
@@ -372,36 +541,59 @@ onMounted(loadClasses)
         <div v-if="!mastery.length" class="empty small">
           还没有诊断数据（学生提交作业后自动累计）
         </div>
-        <div v-for="item in mastery.slice(0, 5)" :key="item.kp_id" class="progress-row">
+        <div
+          v-for="item in mastery.slice(0, 5)"
+          :key="item.kp_id"
+          class="progress-row"
+        >
           <div class="progress-label">
-            <span><span class="kp-chip">{{ item.kp_id }}</span>{{ item.title || '未命名知识点' }}</span>
+            <span
+              ><span class="kp-chip">{{ item.kp_id }}</span
+              >{{ item.title || '未命名知识点' }}</span
+            >
             <span class="num">{{ item.avg_score }}</span>
           </div>
           <div class="bar">
-            <div class="fill mastery" :style="{ width: `${item.avg_score}%` }"></div>
+            <div
+              class="fill mastery"
+              :style="{ width: `${item.avg_score}%` }"
+            ></div>
           </div>
         </div>
       </div>
 
       <div v-if="overview" class="card">
         <h4>学生进度</h4>
-        <div v-if="!overview.students.length" class="empty small">还没有学生加入</div>
+        <div v-if="!overview.students.length" class="empty small">
+          还没有学生加入
+        </div>
         <table v-else class="table">
           <thead>
-            <tr><th>学生</th><th>提交</th><th>进度</th><th>未交任务</th></tr>
+            <tr>
+              <th>学生</th>
+              <th>提交</th>
+              <th>进度</th>
+              <th>未交任务</th>
+            </tr>
           </thead>
           <tbody>
             <tr
               v-for="student in overview.students"
               :key="student.user_id"
               class="clickable"
+              tabindex="0"
+              @keydown.enter="openStudent(student)"
+              @keydown.space.prevent="openStudent(student)"
               @click="openStudent(student)"
             >
               <td>{{ student.display_name || student.username }}</td>
               <td>{{ student.submitted }}/{{ student.total }}</td>
               <td>
                 <div class="bar small-bar">
-                  <div class="fill" :style="{ width: `${Math.round(student.rate * 100)}%` }"></div>
+                  <div
+                    class="fill"
+                    :style="{ width: `${Math.round(student.rate * 100)}%` }"
+                  ></div>
                 </div>
               </td>
               <td class="missing">{{ student.missing.join('、') || '—' }}</td>
@@ -411,20 +603,37 @@ onMounted(loadClasses)
       </div>
 
       <!-- 发布任务 -->
-      <div class="card">
-        <h4>发布任务</h4>
+      <div id="publish-assignment" class="card">
+        <h4>{{ editingId ? '编辑任务' : '发布任务' }}</h4>
         <div class="form-grid">
-          <input v-model="newAssignment.title" placeholder="任务标题，例如：单链表插入训练" />
-          <select v-model="newAssignment.type">
+          <input
+            aria-label="任务标题"
+            v-model="newAssignment.title"
+            placeholder="任务标题，例如：单链表插入训练"
+          />
+          <select aria-label="任务类型" v-model="newAssignment.type">
             <option value="code">代码类（AI 诊断）</option>
             <option value="question">问答类（文字提交）</option>
           </select>
-          <input v-model="newAssignment.kp_ids" placeholder="关联知识点，逗号分隔，例如 ds-01-02, ds-01-03" />
+          <input
+            aria-label="关联知识点"
+            v-model="newAssignment.kp_ids"
+            placeholder="关联知识点，逗号分隔，例如 ds-01-02, ds-01-03"
+          />
           <div class="due-field">
-            <input v-model="newAssignment.due_at" placeholder="2026-12-01 23:59" />
-            <span class="due-hint">格式：年-月-日 时:分</span>
+            <input
+              type="datetime-local"
+              aria-label="截止时间"
+              v-model="newAssignment.due_at"
+              placeholder="2026-12-01 23:59"
+            />
+            <span class="due-hint">留空则不限截止时间</span>
           </div>
-          <textarea v-model="newAssignment.description" placeholder="任务说明（可选）"></textarea>
+          <textarea
+            aria-label="任务说明"
+            v-model="newAssignment.description"
+            placeholder="任务说明（可选）"
+          ></textarea>
           <label class="late-check">
             <input v-model="newAssignment.allow_late" type="checkbox" />
             允许截止后提交（不勾选则到期后禁止提交）
@@ -433,8 +642,12 @@ onMounted(loadClasses)
             <button class="primary" @click="doCreateAssignment">
               {{ editingId ? '保存修改' : '发布' }}
             </button>
-            <button v-if="editingId" class="ghost" @click="resetAssignmentForm">取消编辑</button>
-            <span v-if="editingId" class="editing-hint">正在编辑：{{ newAssignment.title }}</span>
+            <button v-if="editingId" class="ghost" @click="resetAssignmentForm">
+              取消编辑
+            </button>
+            <span v-if="editingId" class="editing-hint"
+              >正在编辑：{{ newAssignment.title }}</span
+            >
           </div>
         </div>
       </div>
@@ -442,32 +655,68 @@ onMounted(loadClasses)
       <div class="card">
         <h4>任务列表</h4>
         <div v-if="loading" class="empty small">加载中…</div>
-        <div v-else-if="!assignments.length" class="empty small">还没有任务</div>
+        <div v-else-if="!assignments.length" class="empty small">
+          还没有任务
+        </div>
         <div v-for="item in assignments" :key="item.id" class="assignment-row">
           <div>
             <strong>{{ item.title }}</strong>
-            <span class="type">{{ item.type === 'code' ? '代码' : '问答' }}</span>
+            <span class="type">{{
+              item.type === 'code' ? '代码' : '问答'
+            }}</span>
             <span class="sub">截止 {{ formatTime(item.due_at) }}</span>
-            <span v-for="kp in item.kp_ids" :key="kp" class="kp-chip">{{ kp }}</span>
+            <span v-for="kp in item.kp_ids" :key="kp" class="kp-chip">{{
+              kp
+            }}</span>
           </div>
           <div class="row-actions">
             <button class="ghost" @click="openSubmissions(item)">
               查看提交（{{ item.submitted_count }}）
             </button>
             <button class="link" @click="startEdit(item)">编辑</button>
-            <button class="link danger" @click="removeAssignment(item)">删除</button>
+            <button class="link danger" @click="removeAssignment(item)">
+              删除
+            </button>
           </div>
         </div>
       </div>
 
-      <div v-if="submissions.length" class="card">
-        <h4>「{{ submissionsTitle }}」的提交</h4>
-        <table class="table">
+      <div v-if="submissionsAssignmentId" id="submission-list" class="card">
+        <div class="submission-heading">
+          <h4>「{{ submissionsTitle }}」的提交</h4>
+          <label
+            ><input v-model="pendingOnly" type="checkbox" />仅看待批阅</label
+          >
+        </div>
+        <AsyncState
+          v-if="submissionLoading || submissionError"
+          :loading="submissionLoading"
+          :error="submissionError"
+          @retry="
+            () => {
+              openSubmissions({
+                id: submissionsAssignmentId,
+                title: submissionsTitle,
+              })
+            }
+          "
+        />
+        <p v-else-if="!visibleSubmissions.length" class="empty small">
+          {{ pendingOnly ? '没有待批阅的提交' : '还没有学生提交' }}
+        </p>
+        <table v-else class="table">
           <thead>
-            <tr><th>学生</th><th>时间</th><th>状态</th><th>分数</th><th>诊断</th><th>操作</th></tr>
+            <tr>
+              <th>学生</th>
+              <th>时间</th>
+              <th>状态</th>
+              <th>分数</th>
+              <th>诊断</th>
+              <th>操作</th>
+            </tr>
           </thead>
           <tbody>
-            <tr v-for="item in submissions" :key="item.id">
+            <tr v-for="item in visibleSubmissions" :key="item.id">
               <td>{{ item.display_name || item.username }}</td>
               <td>{{ formatTime(item.submitted_at) }}</td>
               <td>{{ statusText(item.status) }}</td>
@@ -484,17 +733,26 @@ onMounted(loadClasses)
     </template>
 
     <div v-if="detail" class="mask" @click.self="closeDetail">
-      <div class="modal">
+      <div class="modal" v-dialog="closeDetail">
         <div class="modal-head">
           <h3>{{ detail.display_name || detail.username }} 的提交</h3>
           <button class="link" @click="closeDetail">关闭</button>
         </div>
-        <p class="sub">{{ formatTime(detail.submitted_at) }} · {{ detail.language }}</p>
-        <div class="diag-box" v-if="detail.diagnosis && detail.diagnosis !== '{}'">
+        <p class="sub">
+          {{ formatTime(detail.submitted_at) }} · {{ detail.language }}
+        </p>
+        <div
+          class="diag-box"
+          v-if="detail.diagnosis && detail.diagnosis !== '{}'"
+        >
           <strong>结构化诊断：</strong><code>{{ detail.diagnosis }}</code>
         </div>
         <pre class="code-block">{{ detail.content }}</pre>
-        <div v-if="detail.ai_result" class="ai-box" v-html="renderMarkdown(detail.ai_result)"></div>
+        <div
+          v-if="detail.ai_result"
+          class="ai-box"
+          v-html="renderMarkdown(detail.ai_result)"
+        ></div>
       </div>
     </div>
 
@@ -506,34 +764,64 @@ onMounted(loadClasses)
     />
 
     <div v-if="studentDetail" class="mask" @click.self="studentDetail = null">
-      <div class="modal">
+      <div class="modal" v-dialog="() => (studentDetail = null)">
         <div class="modal-head">
           <h3>
-            {{ studentDetail.profile.display_name || studentDetail.profile.username }}
-            <span class="sub-inline">{{ studentDetail.profile.real_name || '' }}</span>
+            {{
+              studentDetail.profile.display_name ||
+              studentDetail.profile.username
+            }}
+            <span class="sub-inline">{{
+              studentDetail.profile.real_name || ''
+            }}</span>
           </h3>
           <button class="link" @click="studentDetail = null">关闭</button>
         </div>
         <p class="sub">
           {{ studentDetail.profile.username }}
-          <template v-if="studentDetail.profile.major"> · {{ studentDetail.profile.major }}</template>
-          <template v-if="studentDetail.profile.enrollment_year"> · {{ studentDetail.profile.enrollment_year }} 级</template>
+          <template v-if="studentDetail.profile.major">
+            · {{ studentDetail.profile.major }}</template
+          >
+          <template v-if="studentDetail.profile.enrollment_year">
+            · {{ studentDetail.profile.enrollment_year }} 级</template
+          >
         </p>
 
         <h4 class="block-title">知识点掌握度</h4>
-        <div v-if="!studentDetail.mastery.length" class="empty small">还没有诊断数据</div>
-        <div v-for="item in studentDetail.mastery" :key="item.kp_id" class="progress-row">
+        <div v-if="!studentDetail.mastery.length" class="empty small">
+          还没有诊断数据
+        </div>
+        <div
+          v-for="item in studentDetail.mastery"
+          :key="item.kp_id"
+          class="progress-row"
+        >
           <div class="progress-label">
             <span>{{ item.title || item.kp_id }}</span>
             <span class="num">{{ item.score }}</span>
           </div>
-          <div class="bar"><div class="fill mastery" :style="{ width: `${item.score}%` }"></div></div>
+          <div class="bar">
+            <div
+              class="fill mastery"
+              :style="{ width: `${item.score}%` }"
+            ></div>
+          </div>
         </div>
 
         <h4 class="block-title">提交记录</h4>
-        <div v-if="!studentDetail.submissions.length" class="empty small">还没有提交</div>
+        <div v-if="!studentDetail.submissions.length" class="empty small">
+          还没有提交
+        </div>
         <table v-else class="table">
-          <thead><tr><th>任务</th><th>时间</th><th>状态</th><th>分数</th><th></th></tr></thead>
+          <thead>
+            <tr>
+              <th>任务</th>
+              <th>时间</th>
+              <th>状态</th>
+              <th>分数</th>
+              <th></th>
+            </tr>
+          </thead>
           <tbody>
             <tr v-for="item in studentDetail.submissions" :key="item.id">
               <td>{{ item.assignment_title }}</td>
@@ -541,7 +829,17 @@ onMounted(loadClasses)
               <td>{{ statusText(item.status) }}</td>
               <td>{{ item.score ?? '-' }}</td>
               <td>
-                <button class="link" @click="openGrade(item); studentDetail = null">批阅</button>
+                <button
+                  class="link"
+                  @click="
+                    () => {
+                      openGrade(item)
+                      studentDetail = null
+                    }
+                  "
+                >
+                  批阅
+                </button>
               </td>
             </tr>
           </tbody>
@@ -552,6 +850,94 @@ onMounted(loadClasses)
 </template>
 
 <style scoped>
+.teacher-panel {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+}
+.card {
+  border-radius: 12px !important;
+}
+.submission-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.submission-heading label {
+  font-size: 12px;
+  color: var(--muted);
+}
+#submission-list,
+#publish-assignment {
+  scroll-margin-top: 20px;
+}
+.table {
+  display: block;
+  overflow: auto;
+}
+.table th {
+  white-space: nowrap;
+}
+.assignment-row {
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.form-grid input,
+.form-grid select {
+  min-width: 0;
+}
+.class-head {
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.head-actions {
+  flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .teacher-panel {
+    padding: 16px;
+  }
+  .class-head h3 {
+    font-size: 18px;
+  }
+  .class-tabs {
+    max-width: 100%;
+  }
+  .row {
+    flex-wrap: wrap;
+  }
+  .row input {
+    width: 100% !important;
+    flex: 1 1 100%;
+  }
+  .head-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .form-grid textarea,
+  .form-grid .form-actions {
+    grid-column: auto !important;
+  }
+  .stat-grid {
+    gap: 8px !important;
+  }
+  .stat {
+    padding: 12px 8px !important;
+  }
+  .row-actions {
+    flex-wrap: wrap;
+  }
+  .invite {
+    font-size: 12px !important;
+  }
+}
+
 .teacher-panel {
   display: flex;
   flex-direction: column;
@@ -575,19 +961,19 @@ onMounted(loadClasses)
 }
 
 .class-tab.active {
-  border-color: #3b82f6;
+  border-color: var(--primary);
   background: #eff6ff;
   color: #1d4ed8;
 }
 
 .class-tab.add {
   border-style: dashed;
-  color: #3b82f6;
+  color: var(--primary);
 }
 
 .class-tab .count {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 12px;
+  color: var(--muted);
   margin-left: 6px;
 }
 
@@ -606,7 +992,7 @@ onMounted(loadClasses)
 
 .sub {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .invite {
@@ -646,7 +1032,7 @@ onMounted(loadClasses)
 
 .stat span {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .two-col {
@@ -680,7 +1066,7 @@ onMounted(loadClasses)
 }
 
 .num {
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .bar {
@@ -697,7 +1083,7 @@ onMounted(loadClasses)
 
 .fill {
   height: 100%;
-  background: #3b82f6;
+  background: var(--primary);
   border-radius: 999px;
 }
 
@@ -720,7 +1106,7 @@ onMounted(loadClasses)
 }
 
 .table th {
-  color: #94a3b8;
+  color: var(--muted);
   font-weight: 500;
   font-size: 12px;
 }
@@ -771,8 +1157,8 @@ onMounted(loadClasses)
 }
 
 .due-hint {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .form-actions {
@@ -829,7 +1215,7 @@ onMounted(loadClasses)
 
 .sub-inline {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
   margin-left: 6px;
 }
 
@@ -854,7 +1240,7 @@ onMounted(loadClasses)
   padding: 9px 18px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
+  background: var(--primary);
   color: white;
   font-size: 13px;
   cursor: pointer;
@@ -885,9 +1271,9 @@ onMounted(loadClasses)
 }
 
 .type {
-  font-size: 11px;
+  font-size: 12px;
   background: #eff6ff;
-  color: #2563eb;
+  color: var(--primary);
   padding: 1px 6px;
   border-radius: 4px;
   margin: 0 8px;
@@ -899,12 +1285,12 @@ onMounted(loadClasses)
   border-radius: 4px;
   padding: 1px 6px;
   font-family: monospace;
-  font-size: 11px;
+  font-size: 12px;
   margin-left: 6px;
 }
 
 .empty {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 13px;
   text-align: center;
   padding: 26px 10px;
@@ -932,7 +1318,7 @@ onMounted(loadClasses)
 .link {
   border: none;
   background: transparent;
-  color: #3b82f6;
+  color: var(--primary);
   cursor: pointer;
   font-size: 12px;
 }
@@ -1025,7 +1411,7 @@ onMounted(loadClasses)
 
 .field input:focus,
 .field textarea:focus {
-  border-color: #3b82f6;
+  border-color: var(--primary);
   outline: none;
 }
 
@@ -1049,7 +1435,7 @@ onMounted(loadClasses)
   padding: 8px 18px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
+  background: var(--primary);
   color: white;
   font-size: 13px;
   cursor: pointer;
@@ -1079,7 +1465,7 @@ onMounted(loadClasses)
 }
 
 .fill.mastery {
-  background: linear-gradient(90deg, #34d399, #3b82f6);
+  background: linear-gradient(90deg, #34d399, var(--primary));
 }
 
 @media (max-width: 820px) {

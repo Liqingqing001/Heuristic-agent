@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { changePassword, getProfile, updateProfile } from '../api.js'
+import AsyncState from './AsyncState.vue'
 import { setUser, state } from '../session.js'
 
 const profile = ref(null)
@@ -8,6 +9,7 @@ const form = ref({})
 const active = ref('basic')
 const loading = ref(true)
 const saving = ref(false)
+const loadError = ref('')
 const message = ref('')
 const error = ref('')
 
@@ -17,20 +19,32 @@ const passwordError = ref('')
 const passwordSaving = ref(false)
 
 const avatarText = computed(() => {
-  const name = form.value.real_name || form.value.display_name || profile.value?.username || '?'
+  const name =
+    form.value.real_name ||
+    form.value.display_name ||
+    profile.value?.username ||
+    '?'
   return name.trim().slice(0, 1).toUpperCase()
 })
 
-const roleLabel = computed(() => (profile.value?.role === 'teacher' ? '教师' : '学生'))
+const roleLabel = computed(() =>
+  profile.value?.role === 'teacher' ? '教师' : '学生'
+)
 
 async function load() {
   loading.value = true
-  const data = await getProfile()
-  if (data) {
-    profile.value = data
-    form.value = { ...data }
+  loadError.value = ''
+  try {
+    const data = await getProfile()
+    if (data) {
+      profile.value = data
+      form.value = { ...data }
+    }
+  } catch (e) {
+    loadError.value = e.message || '资料加载失败'
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 }
 
 async function save() {
@@ -51,7 +65,11 @@ async function save() {
     profile.value = updated
     form.value = { ...updated }
     if (state.user) {
-      setUser({ ...state.user, display_name: updated.display_name, role: updated.role })
+      setUser({
+        ...state.user,
+        display_name: updated.display_name,
+        role: updated.role,
+      })
     }
     message.value = '已保存'
   } catch (e) {
@@ -84,21 +102,35 @@ onMounted(load)
 </script>
 
 <template>
-  <div v-if="loading" class="loading">加载中…</div>
+  <AsyncState
+    v-if="loading || loadError"
+    :loading="loading"
+    :error="loadError"
+    @retry="load"
+  />
 
   <div v-else class="profile">
     <aside class="side">
       <div class="avatar">{{ avatarText }}</div>
       <h2>{{ form.real_name || form.display_name || profile?.username }}</h2>
-      <p class="role">{{ roleLabel }}<span v-if="profile?.username"> · {{ profile.username }}</span></p>
+      <p class="role">
+        {{ roleLabel
+        }}<span v-if="profile?.username"> · {{ profile.username }}</span>
+      </p>
 
       <div class="menu">
         <div class="menu-title">账号管理</div>
-        <button :class="{ active: active === 'basic' }" @click="active = 'basic'">
+        <button
+          :class="{ active: active === 'basic' }"
+          @click="active = 'basic'"
+        >
           <span>👤 基本信息</span>
           <span class="dot ok"></span>
         </button>
-        <button :class="{ active: active === 'security' }" @click="active = 'security'">
+        <button
+          :class="{ active: active === 'security' }"
+          @click="active = 'security'"
+        >
           <span>🔒 安全设置</span>
           <span class="dot"></span>
         </button>
@@ -115,7 +147,10 @@ onMounted(load)
           </label>
           <label>
             <span>昵称</span>
-            <input v-model="form.display_name" placeholder="显示在班级里的名字" />
+            <input
+              v-model="form.display_name"
+              placeholder="显示在班级里的名字"
+            />
           </label>
           <label>
             <span>账号</span>
@@ -131,11 +166,17 @@ onMounted(load)
           </label>
           <label>
             <span>院系 / 部门</span>
-            <input v-model="form.department" placeholder="例如：大数据与互联网学院" />
+            <input
+              v-model="form.department"
+              placeholder="例如：大数据与互联网学院"
+            />
           </label>
           <label>
             <span>专业</span>
-            <input v-model="form.major" placeholder="例如：数据科学与大数据技术" />
+            <input
+              v-model="form.major"
+              placeholder="例如：数据科学与大数据技术"
+            />
           </label>
           <label>
             <span>性别</span>
@@ -154,7 +195,10 @@ onMounted(load)
 
         <label class="full">
           <span>简介</span>
-          <textarea v-model="form.bio" placeholder="一句话介绍自己，最多 300 字"></textarea>
+          <textarea
+            v-model="form.bio"
+            placeholder="一句话介绍自己，最多 300 字"
+          ></textarea>
         </label>
 
         <p v-if="error" class="error">{{ error }}</p>
@@ -169,26 +213,44 @@ onMounted(load)
 
       <template v-else>
         <h3>安全设置</h3>
-        <p class="tip">修改密码后，其他设备上的登录不会被强制退出；如果怀疑账号泄露，请同时修改。</p>
+        <p class="tip">
+          修改密码后，其他设备上的登录不会被强制退出；如果怀疑账号泄露，请同时修改。
+        </p>
 
         <label class="full">
           <span>原密码</span>
-          <input v-model="password.old" type="password" autocomplete="current-password" />
+          <input
+            v-model="password.old"
+            type="password"
+            autocomplete="current-password"
+          />
         </label>
         <label class="full">
           <span>新密码（至少 6 位）</span>
-          <input v-model="password.next" type="password" autocomplete="new-password" />
+          <input
+            v-model="password.next"
+            type="password"
+            autocomplete="new-password"
+          />
         </label>
         <label class="full">
           <span>确认新密码</span>
-          <input v-model="password.confirm" type="password" autocomplete="new-password" />
+          <input
+            v-model="password.confirm"
+            type="password"
+            autocomplete="new-password"
+          />
         </label>
 
         <p v-if="passwordError" class="error">{{ passwordError }}</p>
         <p v-if="passwordMessage" class="ok">{{ passwordMessage }}</p>
 
         <div class="actions">
-          <button class="primary" :disabled="passwordSaving" @click="submitPassword">
+          <button
+            class="primary"
+            :disabled="passwordSaving"
+            @click="submitPassword"
+          >
             {{ passwordSaving ? '提交中…' : '修改密码' }}
           </button>
         </div>
@@ -198,10 +260,33 @@ onMounted(load)
 </template>
 
 <style scoped>
+.profile {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+}
+.profile input,
+.profile select {
+  min-width: 0;
+}
+@media (max-width: 760px) {
+  .profile {
+    padding: 16px;
+    flex-direction: column;
+  }
+  .side {
+    width: 100% !important;
+  }
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .loading {
   padding: 60px;
   text-align: center;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .profile {
@@ -279,7 +364,7 @@ onMounted(load)
 
 .menu button.active {
   background: #eff6ff;
-  border-left-color: #3b82f6;
+  border-left-color: var(--primary);
   color: #1d4ed8;
 }
 
@@ -338,13 +423,13 @@ textarea {
 input:focus,
 select:focus,
 textarea:focus {
-  border-color: #3b82f6;
+  border-color: var(--primary);
   outline: none;
 }
 
 input:disabled {
   background: #f8fafc;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 textarea {
@@ -354,7 +439,7 @@ textarea {
 
 .tip {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
   margin: 0 0 12px;
   line-height: 1.7;
 }
@@ -367,14 +452,14 @@ textarea {
   padding: 9px 22px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
+  background: var(--primary);
   color: white;
   font-size: 13px;
   cursor: pointer;
 }
 
 .primary:hover:not(:disabled) {
-  background: #2563eb;
+  background: var(--primary);
 }
 
 .primary:disabled {

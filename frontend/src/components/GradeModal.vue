@@ -75,7 +75,10 @@ async function save() {
       feedback: form.value.feedback,
       returned: form.value.returned,
     })
-    toast(form.value.returned ? '已退回，学生可以重做' : '批阅已保存', 'success')
+    toast(
+      form.value.returned ? '已退回，学生可以重做' : '批阅已保存',
+      'success'
+    )
     emit('saved')
   } catch (e) {
     toast(e.message || '批阅失败', 'error')
@@ -87,7 +90,7 @@ async function save() {
 
 <template>
   <div v-if="target" class="mask" @click.self="emit('close')">
-    <div class="modal">
+    <div class="modal" v-dialog="() => emit('close')">
       <div class="modal-head">
         <h3>批阅：{{ target.display_name || target.username }}</h3>
         <button class="link" @click="emit('close')">关闭</button>
@@ -107,23 +110,37 @@ async function save() {
               {{ detail.language === 'text' ? '文字回答' : '代码' }}
             </span>
           </div>
-          <pre v-if="detail.language !== 'text'" class="code">{{ detail.content }}</pre>
+          <pre v-if="detail.language !== 'text'" class="code">{{
+            detail.content
+          }}</pre>
           <div v-else class="answer">{{ detail.content }}</div>
         </section>
 
         <section v-if="diagnosis" class="block">
           <div class="block-head"><h4>AI 诊断</h4></div>
           <div class="chips">
-            <span v-for="item in diagnosis.error_types" :key="item" class="chip error">{{ item }}</span>
-            <span v-if="diagnosis.severity" class="chip">严重度：{{ diagnosis.severity }}</span>
+            <span
+              v-for="item in diagnosis.error_types"
+              :key="item"
+              class="chip error"
+              >{{ item }}</span
+            >
+            <span v-if="diagnosis.severity" class="chip"
+              >严重度：{{ diagnosis.severity }}</span
+            >
             <span v-if="diagnosis.hint_level_reached" class="chip">
               提示层级：{{ diagnosis.hint_level_reached }}/3
             </span>
-            <span v-for="kp in diagnosis.kp_ids" :key="kp" class="chip kp">{{ kp }}</span>
+            <span v-for="kp in diagnosis.kp_ids" :key="kp" class="chip kp">{{
+              kp
+            }}</span>
           </div>
           <details v-if="detail.ai_result" class="ai">
             <summary>展开 AI 诊断全文</summary>
-            <div class="ai-body" v-html="renderMarkdown(detail.ai_result)"></div>
+            <div
+              class="ai-body"
+              v-html="renderMarkdown(detail.ai_result)"
+            ></div>
           </details>
         </section>
 
@@ -197,7 +214,7 @@ async function save() {
 .link {
   border: none;
   background: transparent;
-  color: #3b82f6;
+  color: var(--primary);
   font-size: 12px;
   cursor: pointer;
 }
@@ -205,13 +222,13 @@ async function save() {
 .sub {
   margin: 6px 0 0;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .loading {
   padding: 30px;
   text-align: center;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 13px;
 }
 
@@ -235,11 +252,11 @@ async function save() {
 }
 
 .tag {
-  font-size: 11px;
+  font-size: 12px;
   padding: 1px 7px;
   border-radius: 4px;
   background: #eff6ff;
-  color: #2563eb;
+  color: var(--primary);
 }
 
 .tag.text {
@@ -305,7 +322,7 @@ async function save() {
 
 .ai summary {
   cursor: pointer;
-  color: #3b82f6;
+  color: var(--primary);
 }
 
 .ai-body {
@@ -350,7 +367,7 @@ async function save() {
 
 .field input:focus,
 .field textarea:focus {
-  border-color: #3b82f6;
+  border-color: var(--primary);
   outline: none;
 }
 
@@ -374,7 +391,7 @@ async function save() {
   padding: 8px 18px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
+  background: var(--primary);
   color: white;
   font-size: 13px;
   cursor: pointer;

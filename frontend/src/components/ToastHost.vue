@@ -3,7 +3,7 @@ import { dismiss, toasts } from '../toast.js'
 </script>
 
 <template>
-  <div class="toast-host">
+  <div class="toast-host" role="status" aria-live="polite" aria-atomic="true">
     <div
       v-for="item in toasts"
       :key="item.id"

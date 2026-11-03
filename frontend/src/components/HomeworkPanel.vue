@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onActivated, ref, nextTick } from 'vue'
 import {
   getSubmission,
   joinClass,
@@ -7,6 +7,13 @@ import {
   listClasses,
   submitTextAnswer,
 } from '../api.js'
+import { state } from '../session.js'
+import {
+  assignmentStatus,
+  statusLabels,
+  sortAssignments,
+} from '../assignments.js'
+import AsyncState from './AsyncState.vue'
 import { chapterLabel } from '../kp.js'
 import { renderMarkdown } from '../markdown.js'
 
@@ -19,6 +26,13 @@ const selectedId = ref(null)
 const detail = ref(null)
 const filter = ref('all')
 const loading = ref(false)
+const loadError = ref('')
+const detailLoading = ref(false)
+const detailError = ref('')
+const drafts = new Map()
+let classRequest = 0,
+  detailRequest = 0,
+  handledNavigation = 0
 const message = ref('')
 const error = ref('')
 
@@ -35,14 +49,25 @@ const selected = computed(
   () => assignments.value.find((item) => item.id === selectedId.value) || null
 )
 const isClosed = computed(
-  () => !!selected.value && selected.value.is_overdue && !selected.value.allow_late
+  () =>
+    !!selected.value && selected.value.is_overdue && !selected.value.allow_late
 )
 
-const filtered = computed(() => {
-  if (filter.value === 'todo') return assignments.value.filter((item) => !item.my_submission)
-  if (filter.value === 'done') return assignments.value.filter((item) => item.my_submission)
-  return assignments.value
-})
+const filters = [
+  { key: 'all', label: '全部' },
+  { key: 'todo', label: '待提交' },
+  { key: 'returned', label: '待重做' },
+  { key: 'pending', label: '待批阅' },
+  { key: 'graded', label: '已批阅' },
+]
+const filtered = computed(() =>
+  sortAssignments(
+    assignments.value.filter(
+      (item) =>
+        filter.value === 'all' || assignmentStatus(item) === filter.value
+    )
+  )
+)
 
 const diagnosis = computed(() => {
   if (!detail.value?.diagnosis) return null
@@ -56,42 +81,102 @@ const diagnosis = computed(() => {
   }
 })
 
+function rememberDraft() {
+  if (selectedId.value) drafts.set(selectedId.value, answer.value)
+}
 async function loadClasses() {
-  const data = await listClasses()
-  classes.value = data.joined || []
-  if (!currentClassId.value && classes.value.length) {
-    currentClassId.value = classes.value[0].id
-    await loadAssignments()
-    if (assignments.value.length) await select(assignments.value[0])
+  loadError.value = ''
+  loading.value = true
+  try {
+    const data = await listClasses()
+    classes.value = data.joined || []
+    const target = state.navigation
+    const direct =
+      target?.tab === 'homework' && target.nonce !== handledNavigation
+    if (direct) handledNavigation = target.nonce
+    const classId =
+      direct && classes.value.some((c) => c.id === target.classId)
+        ? target.classId
+        : currentClassId.value || classes.value[0]?.id
+    if (classId) {
+      currentClassId.value = classId
+      await loadAssignments()
+      if (loadError.value) return
+      const item =
+        assignments.value.find(
+          (a) => a.id === (direct ? target.assignmentId : selectedId.value)
+        ) || assignments.value[0]
+      if (direct && item) filter.value = 'all'
+      if (item) await select(item)
+      else {
+        selectedId.value = null
+        detail.value = null
+      }
+    }
+    if (direct && target.assignmentId)
+      nextTick(() =>
+        document
+          .querySelector('.detail')
+          ?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+      )
+  } catch (e) {
+    loadError.value = e.message || '班级加载失败'
+  } finally {
+    loading.value = false
   }
 }
-
 async function loadAssignments() {
   if (!currentClassId.value) return
+  const request = ++classRequest
   loading.value = true
-  assignments.value = await listAssignments(currentClassId.value)
-  loading.value = false
+  loadError.value = ''
+  try {
+    const items = await listAssignments(currentClassId.value)
+    if (request === classRequest) assignments.value = items
+  } catch (e) {
+    if (request === classRequest) loadError.value = e.message || '任务加载失败'
+  } finally {
+    if (request === classRequest) loading.value = false
+  }
 }
-
 async function switchClass(id) {
+  rememberDraft()
+  ++detailRequest
   currentClassId.value = id
   selectedId.value = null
   detail.value = null
   await loadAssignments()
-  if (assignments.value.length) await select(assignments.value[0])
+  if (!loadError.value && assignments.value.length)
+    await select(assignments.value[0])
 }
-
 async function select(assignment) {
+  rememberDraft()
+  const request = ++detailRequest
   selectedId.value = assignment.id
   detail.value = null
-  answer.value = ''
-  if (assignment.my_submission) {
-    detail.value = await getSubmission(assignment.my_submission.id)
+  detailError.value = ''
+  answer.value = drafts.get(assignment.id) || ''
+  if (!assignment.my_submission) {
+    detailLoading.value = false
+    return
+  }
+  detailLoading.value = true
+  try {
+    const result = await getSubmission(assignment.my_submission.id)
+    if (request === detailRequest) detail.value = result
+  } catch (e) {
+    if (request === detailRequest)
+      detailError.value = e.message || '提交内容加载失败'
+  } finally {
+    if (request === detailRequest) detailLoading.value = false
   }
 }
 
 function redo() {
-  emit('start-assignment', { ...selected.value, class_name: currentClass.value?.name || '' })
+  emit('start-assignment', {
+    ...selected.value,
+    class_name: currentClass.value?.name || '',
+  })
 }
 
 async function submitText() {
@@ -105,9 +190,12 @@ async function submitText() {
   try {
     await submitTextAnswer(selected.value.id, content)
     message.value = '已提交'
+    drafts.delete(selectedId.value)
+    answer.value = ''
     await loadAssignments()
     const fresh = assignments.value.find((item) => item.id === selectedId.value)
-    if (fresh?.my_submission) detail.value = await getSubmission(fresh.my_submission.id)
+    if (fresh?.my_submission)
+      detail.value = await getSubmission(fresh.my_submission.id)
   } catch (e) {
     error.value = e.message || '提交失败'
   } finally {
@@ -125,7 +213,8 @@ async function doJoin() {
   joining.value = true
   try {
     const result = await joinClass(code)
-    message.value = result.status === 'already' ? '你已经在这个班级里了' : '加入成功'
+    message.value =
+      result.status === 'already' ? '你已经在这个班级里了' : '加入成功'
     joinCode.value = ''
     await loadClasses()
     if (result.class) await switchClass(result.class.id)
@@ -141,7 +230,7 @@ function formatTime(value) {
   return value.replace('T', ' ')
 }
 
-onMounted(loadClasses)
+onActivated(loadClasses)
 </script>
 
 <template>
@@ -157,18 +246,34 @@ onMounted(loadClasses)
         >
           {{ item.name }}
         </button>
-        <span v-if="currentClass" class="class-teacher">{{ currentClass.teacher_name }} 老师</span>
+        <span v-if="currentClass" class="class-teacher"
+          >{{ currentClass.teacher_name }} 老师</span
+        >
       </div>
       <div class="join-inline">
-        <input v-model="joinCode" placeholder="邀请码加入班级" @keydown.enter="doJoin" />
-        <button :disabled="joining" @click="doJoin">{{ joining ? '…' : '加入' }}</button>
+        <input
+          aria-label="班级邀请码"
+          maxlength="6"
+          v-model="joinCode"
+          placeholder="邀请码加入班级"
+          @keydown.enter="doJoin"
+        />
+        <button :disabled="joining" @click="doJoin">
+          {{ joining ? '…' : '加入' }}
+        </button>
       </div>
     </div>
 
     <p v-if="error" class="error">{{ error }}</p>
     <p v-if="message" class="ok">{{ message }}</p>
 
-    <div v-if="classes.length === 0" class="empty big">
+    <AsyncState
+      v-if="loading || loadError"
+      :loading="loading"
+      :error="loadError"
+      @retry="loadClasses"
+    />
+    <div v-else-if="classes.length === 0" class="empty big">
       还没有加入班级。<br />
       向老师要一个 6 位邀请码，粘贴到右上角即可。
     </div>
@@ -176,28 +281,49 @@ onMounted(loadClasses)
     <div v-else class="layout">
       <aside class="list">
         <div class="filters">
-          <button :class="{ active: filter === 'all' }" @click="filter = 'all'">全部</button>
-          <button :class="{ active: filter === 'todo' }" @click="filter = 'todo'">待完成</button>
-          <button :class="{ active: filter === 'done' }" @click="filter = 'done'">已提交</button>
+          <button
+            v-for="option in filters"
+            :key="option.key"
+            :class="{ active: filter === option.key }"
+            @click="filter = option.key"
+          >
+            {{ option.label
+            }}<span>{{
+              assignments.filter(
+                (a) =>
+                  option.key === 'all' || assignmentStatus(a) === option.key
+              ).length
+            }}</span>
+          </button>
         </div>
 
         <div v-if="loading" class="empty small">加载中…</div>
-        <div v-else-if="!filtered.length" class="empty small">没有符合条件的任务</div>
+        <div v-else-if="!filtered.length" class="empty small">
+          没有符合条件的任务
+        </div>
 
         <div
           v-for="item in filtered"
           :key="item.id"
           class="item"
+          role="button"
+          tabindex="0"
+          @keydown.enter="select(item)"
+          @keydown.space.prevent="select(item)"
           :class="{ active: item.id === selectedId }"
           @click="select(item)"
         >
           <div class="item-title">{{ item.title }}</div>
           <div class="item-meta">
-            <span class="type" :class="item.type">{{ item.type === 'code' ? '代码' : '问答' }}</span>
-            <span :class="item.my_submission ? 'done' : 'todo'">
-              {{ item.my_submission ? '已提交' : '待完成' }}
+            <span class="type" :class="item.type">{{
+              item.type === 'code' ? '代码' : '问答'
+            }}</span>
+            <span :class="assignmentStatus(item)">
+              {{ statusLabels[assignmentStatus(item)] }}
             </span>
-            <span v-if="item.is_overdue && !item.my_submission" class="overdue">已截止</span>
+            <span v-if="item.is_overdue && !item.my_submission" class="overdue"
+              >已截止</span
+            >
             <span class="due">{{ formatTime(item.due_at) }}</span>
           </div>
         </div>
@@ -217,19 +343,36 @@ onMounted(loadClasses)
             <div class="meta">
               <span>截止：{{ formatTime(selected.due_at) }}</span>
               <span v-if="selected.is_overdue" class="overdue">
-                {{ selected.allow_late ? '已截止（仍可提交）' : '已截止，不可提交' }}
+                {{
+                  selected.allow_late
+                    ? '已截止（仍可提交）'
+                    : '已截止，不可提交'
+                }}
               </span>
               <span v-for="kp in selected.kp_ids" :key="kp" class="kp-chip">
                 {{ selected.kp_titles?.[kp] || chapterLabel(kp) }}
               </span>
             </div>
-            <p v-if="selected.description" class="desc">{{ selected.description }}</p>
+            <p v-if="selected.description" class="desc">
+              {{ selected.description }}
+            </p>
           </header>
 
-          <div v-if="detail" class="submission">
+          <AsyncState
+            v-if="detailLoading || detailError"
+            :loading="detailLoading"
+            :error="detailError"
+            @retry="select(selected)"
+          />
+          <div v-else-if="detail" class="submission">
             <div class="sub-head">
               <strong>我的提交</strong>
-              <span>{{ formatTime(detail.submitted_at) }} · {{ detail.status }}</span>
+              <span
+                >{{ formatTime(detail.submitted_at) }} ·
+                {{
+                  statusLabels[assignmentStatus({ my_submission: detail })]
+                }}</span
+              >
             </div>
 
             <div
@@ -238,25 +381,42 @@ onMounted(loadClasses)
               :class="detail.status"
             >
               <div class="grade-main">
-                <span>{{ detail.status === 'returned' ? '已退回重做' : '老师评阅' }}</span>
+                <span>{{
+                  detail.status === 'returned' ? '已退回重做' : '老师评阅'
+                }}</span>
                 <strong>{{ detail.score ?? '-' }}</strong>
                 <span>分</span>
               </div>
-              <p v-if="detail.feedback" class="grade-comment">{{ detail.feedback }}</p>
+              <p v-if="detail.feedback" class="grade-comment">
+                {{ detail.feedback }}
+              </p>
               <p v-else class="grade-comment muted">老师没有留下评语</p>
             </div>
             <p v-else class="pending-grade">已提交，等待老师批阅</p>
 
             <div v-if="diagnosis" class="chips">
-              <span v-for="item in diagnosis.error_types" :key="item" class="chip error">{{ item }}</span>
-              <span v-if="diagnosis.severity" class="chip">严重度：{{ diagnosis.severity }}</span>
+              <span
+                v-for="item in diagnosis.error_types"
+                :key="item"
+                class="chip error"
+                >{{ item }}</span
+              >
+              <span v-if="diagnosis.severity" class="chip"
+                >严重度：{{ diagnosis.severity }}</span
+              >
               <span v-if="diagnosis.hint_level_reached" class="chip">
                 提示层级：{{ diagnosis.hint_level_reached }}/3
               </span>
-              <span v-for="kp in diagnosis.kp_ids" :key="kp" class="chip kp">{{ kp }}</span>
+              <span v-for="kp in diagnosis.kp_ids" :key="kp" class="chip kp">{{
+                kp
+              }}</span>
             </div>
 
-            <div v-if="detail.ai_result" class="ai-box" v-html="renderMarkdown(detail.ai_result)"></div>
+            <div
+              v-if="detail.ai_result"
+              class="ai-box"
+              v-html="renderMarkdown(detail.ai_result)"
+            ></div>
 
             <details class="code-details">
               <summary>查看我提交的内容</summary>
@@ -266,11 +426,21 @@ onMounted(loadClasses)
             <div v-if="selected.type === 'code' && !isClosed" class="actions">
               <button class="primary" @click="redo">重新提交</button>
             </div>
-            <p v-else-if="isClosed" class="closed-tip">任务已截止，不再接受提交。</p>
+            <p v-else-if="isClosed" class="closed-tip">
+              任务已截止，不再接受提交。
+            </p>
 
             <div v-else-if="!isClosed" class="actions answer-box">
-              <textarea v-model="answer" placeholder="修改后可以重新提交…"></textarea>
-              <button class="primary" :disabled="submitting" @click="submitText">
+              <textarea
+                aria-label="你的作业答案"
+                v-model="answer"
+                placeholder="修改后可以重新提交…"
+              ></textarea>
+              <button
+                class="primary"
+                :disabled="submitting"
+                @click="submitText"
+              >
                 {{ submitting ? '提交中…' : '重新提交' }}
               </button>
             </div>
@@ -284,8 +454,16 @@ onMounted(loadClasses)
                 <button class="primary" @click="redo">去完成</button>
               </template>
               <template v-else>
-                <textarea v-model="answer" placeholder="写下你的答案…"></textarea>
-                <button class="primary" :disabled="submitting" @click="submitText">
+                <textarea
+                  aria-label="你的作业答案"
+                  v-model="answer"
+                  placeholder="写下你的答案…"
+                ></textarea>
+                <button
+                  class="primary"
+                  :disabled="submitting"
+                  @click="submitText"
+                >
                   {{ submitting ? '提交中…' : '提交答案' }}
                 </button>
               </template>
@@ -298,6 +476,94 @@ onMounted(loadClasses)
 </template>
 
 <style scoped>
+.homework {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px;
+}
+.filters {
+  flex-wrap: wrap;
+}
+.filters button {
+  flex: 0 0 auto !important;
+  padding: 7px 8px !important;
+}
+.filters button span {
+  font-size: 10px;
+  margin-left: 4px;
+  opacity: 0.8;
+}
+.list {
+  width: 285px !important;
+}
+.item:focus-visible {
+  outline-offset: -3px;
+}
+.detail {
+  background: #fff;
+}
+.detail-head {
+  padding-bottom: 5px;
+}
+.layout {
+  align-items: flex-start;
+}
+.detail {
+  min-height: 460px;
+  scroll-margin-top: 20px;
+}
+.list .item {
+  background: #fff;
+}
+.list .item.active {
+  background: #f0f5ff;
+}
+.filters {
+  padding-bottom: 8px;
+}
+.item-title {
+  font-weight: 550;
+}
+.detail .title-row {
+  flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .homework {
+    padding: 16px;
+  }
+  .list {
+    width: 100% !important;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+  .layout {
+    gap: 20px;
+  }
+  .detail {
+    width: 100%;
+    padding: 16px !important;
+  }
+  .join-inline {
+    width: 100%;
+  }
+  .join-inline input {
+    flex: 1;
+    width: auto !important;
+    min-width: 0;
+  }
+  .sub-head {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .filters button {
+    font-size: 11px !important;
+  }
+  .class-tabs {
+    max-width: 100%;
+  }
+}
+
 .homework {
   display: flex;
   flex-direction: column;
@@ -330,14 +596,14 @@ onMounted(loadClasses)
 }
 
 .class-tab.active {
-  border-color: #3b82f6;
+  border-color: var(--primary);
   background: #eff6ff;
   color: #1d4ed8;
 }
 
 .class-teacher {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .join-inline {
@@ -394,7 +660,7 @@ onMounted(loadClasses)
 }
 
 .filters button.active {
-  border-color: #3b82f6;
+  border-color: var(--primary);
   color: #1d4ed8;
   background: #eff6ff;
 }
@@ -411,7 +677,7 @@ onMounted(loadClasses)
 }
 
 .item.active {
-  border-color: #3b82f6;
+  border-color: var(--primary);
   background: #f8fbff;
 }
 
@@ -427,14 +693,15 @@ onMounted(loadClasses)
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 12px;
+  color: var(--muted);
 }
 
-.item-meta .done {
+.item-meta .graded {
   color: #15803d;
 }
 
+.item-meta .returned,
 .item-meta .todo {
   color: #b45309;
 }
@@ -475,14 +742,14 @@ onMounted(loadClasses)
 }
 
 .type {
-  font-size: 11px;
+  font-size: 12px;
   padding: 1px 7px;
   border-radius: 4px;
 }
 
 .type.code {
   background: #eff6ff;
-  color: #2563eb;
+  color: var(--primary);
 }
 
 .type.question {
@@ -496,7 +763,7 @@ onMounted(loadClasses)
   gap: 8px;
   align-items: center;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
   margin-top: 8px;
 }
 
@@ -553,12 +820,12 @@ onMounted(loadClasses)
 }
 
 .grade-comment.muted {
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .pending-grade {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
   margin: 0 0 12px;
 }
 
@@ -587,7 +854,7 @@ onMounted(loadClasses)
 
 .sub-head span {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .chips {
@@ -641,7 +908,7 @@ onMounted(loadClasses)
 
 .code-details summary {
   cursor: pointer;
-  color: #3b82f6;
+  color: var(--primary);
 }
 
 .code-details pre {
@@ -680,7 +947,7 @@ textarea {
   padding: 8px 18px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
+  background: var(--primary);
   color: white;
   font-size: 13px;
   cursor: pointer;
@@ -693,7 +960,7 @@ textarea {
 }
 
 .empty {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 13px;
   text-align: center;
   padding: 20px;

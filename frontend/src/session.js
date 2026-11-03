@@ -23,7 +23,12 @@ export function loadLlmKey() {
 }
 
 export function getLlmKey() {
-  return state.llmKey || sessionStorage.getItem(LLM_KEY) || localStorage.getItem(LLM_KEY) || ''
+  return (
+    state.llmKey ||
+    sessionStorage.getItem(LLM_KEY) ||
+    localStorage.getItem(LLM_KEY) ||
+    ''
+  )
 }
 
 export function saveLlmKey(key, remember) {
@@ -56,4 +61,13 @@ export function setAssistantMode(mode) {
 
 export function clearAssignment() {
   state.activeAssignment = null
+}
+
+// 页面内定位，不包含密钥或作业正文；保留在当前应用会话。
+export function navigateTo(tab, target = {}) {
+  state.navigation = {
+    tab,
+    ...target,
+    nonce: (state.navigation?.nonce || 0) + 1,
+  }
 }

@@ -17,6 +17,7 @@ onMounted(() => {
     doc: props.modelValue || '',
     extensions: [
       basicSetup,
+      EditorView.contentAttributes.of({ 'aria-label': '代码编辑器' }),
       cpp(),
       oneDark,
       EditorView.updateListener.of((update) => {

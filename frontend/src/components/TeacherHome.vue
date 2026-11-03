@@ -1,8 +1,16 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onActivated, ref } from 'vue'
 import { classMastery, getOverview, listClasses } from '../api.js'
 
-const emit = defineEmits(['goto'])
+import { navigateTo } from '../session.js'
+import AppIcon from './AppIcon.vue'
+import AsyncState from './AsyncState.vue'
+import OnboardingSteps from './OnboardingSteps.vue'
+const emit = defineEmits(['goto', 'open-settings'])
+const error = ref('')
+const switching = ref(false)
+const activeTrend = ref(null)
+let requestId = 0
 
 const loading = ref(true)
 const classes = ref([])
@@ -17,7 +25,9 @@ const currentClass = computed(
 const averageRate = computed(() => {
   const list = overview.value?.assignments || []
   if (!list.length) return 0
-  return Math.round((list.reduce((sum, item) => sum + item.rate, 0) / list.length) * 100)
+  return Math.round(
+    (list.reduce((sum, item) => sum + item.rate, 0) / list.length) * 100
+  )
 })
 
 const maxTrend = computed(() => {
@@ -35,19 +45,48 @@ const weakPoints = computed(() => mastery.value.slice(0, 3))
 
 async function load() {
   loading.value = true
-  const data = await listClasses()
-  classes.value = data.taught || []
-  if (classes.value.length) {
-    await selectClass(classes.value[0].id)
+  error.value = ''
+  try {
+    const data = await listClasses()
+    classes.value = data.taught || []
+    if (classes.value.length)
+      await selectClass(
+        classes.value.some((c) => c.id === currentId.value)
+          ? currentId.value
+          : classes.value[0].id
+      )
+  } catch (e) {
+    error.value = e.message || '教学数据加载失败'
+  } finally {
+    loading.value = false
   }
-  loading.value = false
 }
-
 async function selectClass(id) {
+  const request = ++requestId
   currentId.value = id
-  const [stats, masteryData] = await Promise.all([getOverview(id), classMastery(id)])
-  overview.value = stats
-  mastery.value = masteryData.items || []
+  switching.value = true
+  error.value = ''
+  try {
+    const [stats, masteryData] = await Promise.all([
+      getOverview(id),
+      classMastery(id),
+    ])
+    if (request !== requestId) return
+    overview.value = stats
+    mastery.value = masteryData.items || []
+  } catch (e) {
+    if (request === requestId) error.value = e.message || '班级数据加载失败'
+  } finally {
+    if (request === requestId) switching.value = false
+  }
+}
+function openGrading(item) {
+  navigateTo('workspace', {
+    classId: currentId.value,
+    assignmentId: item?.assignment_id,
+    submissionId: item?.id,
+    action: 'grading',
+  })
 }
 
 function formatTime(value) {
@@ -55,17 +94,38 @@ function formatTime(value) {
   return value.replace('T', ' ')
 }
 
-onMounted(load)
+onActivated(load)
 </script>
 
 <template>
-  <div v-if="loading" class="empty">加载中…</div>
+  <AsyncState
+    v-if="loading || error"
+    :loading="loading"
+    :error="error"
+    @retry="load"
+  />
 
-  <div v-else-if="!classes.length" class="empty">
-    还没有班级。<button class="primary" @click="emit('goto', 'workspace')">去创建班级</button>
-  </div>
+  <OnboardingSteps
+    v-else-if="!classes.length"
+    teacher
+    :has-class="false"
+    :has-assignment="false"
+  />
 
   <div v-else class="home">
+    <div class="teacher-hello">
+      <div>
+        <span class="eyebrow">TEACHING OVERVIEW</span>
+        <h3>每一份反馈，都让理解更进一步</h3>
+        <p>关注学习进展，把时间留给最需要帮助的学生。</p>
+      </div>
+      <AppIcon name="chart" :size="46" />
+    </div>
+    <OnboardingSteps
+      teacher
+      :has-class="!!classes.length"
+      :has-assignment="(overview?.assignment_count || 0) > 0"
+    />
     <div class="head">
       <div class="class-tabs">
         <button
@@ -77,10 +137,13 @@ onMounted(load)
           {{ item.name }}
         </button>
       </div>
-      <button class="primary" @click="emit('goto', 'workspace')">进入班级管理</button>
+      <button class="primary" @click="emit('goto', 'workspace')">
+        进入班级管理
+      </button>
     </div>
 
-    <div class="stats">
+    <AsyncState v-if="switching" loading />
+    <div v-else class="stats">
       <div class="stat">
         <b>{{ overview?.member_count ?? 0 }}</b>
         <span>学生人数</span>
@@ -104,16 +167,25 @@ onMounted(load)
         <div class="panel-head">
           <h4>近 14 天提交趋势</h4>
         </div>
-        <div class="chart">
-          <div
+        <div class="chart" role="group" aria-label="近14天每日提交次数">
+          <button
             v-for="item in overview?.trend || []"
             :key="item.date"
             class="chart-col"
+            :class="{ selected: activeTrend === item.date }"
+            @click="activeTrend = item.date"
+            :aria-label="`${item.date}：${item.count} 次提交`"
             :title="`${item.date}：${item.count} 次`"
           >
-            <div class="chart-bar" :style="{ height: `${Math.round((item.count / maxTrend) * 100)}%` }"></div>
+            <span class="chart-count">{{ item.count }}</span>
+            <div
+              class="chart-bar"
+              :style="{
+                height: `${Math.round((item.count / maxTrend) * 72)}px`,
+              }"
+            ></div>
             <span class="chart-label">{{ item.date.slice(5) }}</span>
-          </div>
+          </button>
         </div>
       </section>
 
@@ -128,7 +200,9 @@ onMounted(load)
             <span class="kp">{{ item.kp_id }}</span>
             {{ item.title || '未命名知识点' }}
           </div>
-          <div class="bar"><div class="fill" :style="{ width: `${item.avg_score}%` }"></div></div>
+          <div class="bar">
+            <div class="fill" :style="{ width: `${item.avg_score}%` }"></div>
+          </div>
           <span class="weak-score">{{ item.avg_score }}</span>
         </div>
       </section>
@@ -137,10 +211,15 @@ onMounted(load)
     <section class="panel">
       <div class="panel-head">
         <h4>待批阅</h4>
-        <button class="link" @click="emit('goto', 'workspace')">去批阅 →</button>
+        <button class="link" @click="openGrading()">去批阅 →</button>
       </div>
       <div v-if="!pending.length" class="empty small">没有待批阅的提交。</div>
-      <div v-for="item in pending.slice(0, 5)" :key="item.id" class="row">
+      <button
+        v-for="item in pending.slice(0, 5)"
+        :key="item.id"
+        class="row pending-row"
+        @click="openGrading(item)"
+      >
         <div>
           <div class="row-title">{{ item.assignment_title }}</div>
           <div class="row-meta">
@@ -148,12 +227,129 @@ onMounted(load)
             <span>{{ formatTime(item.submitted_at) }}</span>
           </div>
         </div>
-      </div>
+        <span class="pending-link"
+          >批阅 <AppIcon name="arrow" :size="16"
+        /></span>
+      </button>
     </section>
   </div>
 </template>
 
 <style scoped>
+.teacher-hello {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 8px 0 14px;
+  color: var(--primary);
+}
+.teacher-hello h3 {
+  font-size: 23px;
+  margin: 9px 0;
+  color: var(--text);
+}
+.teacher-hello p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+.home {
+  gap: 20px !important;
+}
+.stat,
+.panel {
+  background: white !important;
+  border-radius: var(--radius) !important;
+  padding: 22px !important;
+}
+.stat {
+  text-align: left !important;
+}
+.stat b {
+  font-size: 30px !important;
+  color: var(--text) !important;
+}
+.stat b.warn {
+  color: #bd7a25 !important;
+}
+.panel-head h4 {
+  font-size: 15px !important;
+}
+.chart {
+  height: 145px !important;
+  gap: 4px !important;
+}
+.chart-col {
+  border: 0;
+  background: none;
+  padding: 0 1px;
+  min-width: 0;
+  color: var(--muted);
+}
+.chart-col:hover,
+.chart-col.selected {
+  background: #edf3ff;
+  border-radius: 4px;
+}
+.chart-count {
+  font-size: 11px;
+  line-height: 16px;
+  color: #52678d;
+}
+.chart-label {
+  color: var(--muted) !important;
+  font-size: 11px !important;
+}
+.pending-row {
+  width: 100%;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  gap: 12px;
+}
+.pending-row:hover {
+  background: var(--surface);
+}
+.pending-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--primary);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.fill {
+  background: #e4ac5d !important;
+}
+.weak-title {
+  white-space: normal !important;
+}
+@media (max-width: 760px) {
+  .teacher-hello h3 {
+    font-size: 21px;
+  }
+  .teacher-hello > svg {
+    display: none;
+  }
+  .stat,
+  .panel {
+    padding: 18px !important;
+  }
+  .chart-label {
+    font-size: 11px !important;
+    writing-mode: vertical-rl;
+  }
+  .chart {
+    height: 165px !important;
+  }
+  .panel-head {
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+}
+
 .home {
   display: flex;
   flex-direction: column;
@@ -185,7 +381,7 @@ onMounted(load)
 }
 
 .class-tabs button.active {
-  border-color: #3b82f6;
+  border-color: var(--primary);
   background: #eff6ff;
   color: #1d4ed8;
 }
@@ -245,8 +441,8 @@ onMounted(load)
 }
 
 .hint {
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .chart {
@@ -270,12 +466,12 @@ onMounted(load)
 .chart-bar {
   width: 100%;
   min-height: 3px;
-  background: linear-gradient(180deg, #93c5fd, #3b82f6);
+  background: linear-gradient(180deg, #93c5fd, var(--primary));
   border-radius: 4px 4px 0 0;
 }
 
 .chart-label {
-  font-size: 9px;
+  font-size: 11px;
   color: #cbd5e1;
 }
 
@@ -345,8 +541,8 @@ onMounted(load)
 .row-meta {
   display: flex;
   gap: 10px;
-  font-size: 11px;
-  color: #94a3b8;
+  font-size: 12px;
+  color: var(--muted);
   margin-top: 3px;
 }
 
@@ -354,7 +550,7 @@ onMounted(load)
   padding: 8px 16px;
   border: none;
   border-radius: 8px;
-  background: #3b82f6;
+  background: var(--primary);
   color: white;
   font-size: 13px;
   cursor: pointer;
@@ -363,13 +559,13 @@ onMounted(load)
 .link {
   border: none;
   background: transparent;
-  color: #3b82f6;
+  color: var(--primary);
   font-size: 12px;
   cursor: pointer;
 }
 
 .empty {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 13px;
   text-align: center;
   padding: 40px;

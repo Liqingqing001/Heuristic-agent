@@ -36,9 +36,12 @@ function handle401(resp) {
 }
 
 async function readError(resp) {
+  handle401(resp)
   try {
     const data = await resp.json()
-    return data.detail || `HTTP ${resp.status}`
+    if (Array.isArray(data.detail))
+      return data.detail.map((item) => item.msg || '参数无效').join('；')
+    return typeof data.detail === 'string' ? data.detail : `HTTP ${resp.status}`
   } catch {
     return `HTTP ${resp.status}`
   }
@@ -57,11 +60,21 @@ export async function apiLogin(username, password) {
   return data
 }
 
-export async function apiRegister(username, password, role = 'student', displayName = '') {
+export async function apiRegister(
+  username,
+  password,
+  role = 'student',
+  displayName = ''
+) {
   const resp = await fetch('/api/auth/register', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password, role, display_name: displayName }),
+    body: JSON.stringify({
+      username,
+      password,
+      role,
+      display_name: displayName,
+    }),
   })
   const data = await resp.json()
   if (!resp.ok) throw new Error(data.detail || '注册失败')
@@ -71,7 +84,8 @@ export async function apiRegister(username, password, role = 'student', displayN
 
 export async function apiMe() {
   const resp = await fetch('/api/auth/me', { headers: authHeaders() })
-  if (!resp.ok) return null
+  if (handle401(resp)) return null
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
@@ -82,16 +96,17 @@ export function apiLogout() {
 // ==================== 状态 ====================
 export async function apiStatus() {
   const resp = await fetch('/api/llm/status')
-  if (!resp.ok) return null
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
 // ==================== SSE 流式 ====================
-async function streamFetch(url, body, onToken, onError) {
+async function streamFetch(url, body, onToken, onError, signal) {
   const resp = await fetch(url, {
     method: 'POST',
     headers: authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(body),
+    signal,
   })
   if (!resp.ok || !resp.body) {
     if (handle401(resp)) return null
@@ -102,8 +117,19 @@ async function streamFetch(url, body, onToken, onError) {
 }
 
 // ==================== 对话 ====================
-export function streamChat({ question, conversation_id }, onToken, onError) {
-  return streamFetch('/api/chat', { question, conversation_id }, onToken, onError)
+export function streamChat(
+  { question, conversation_id },
+  onToken,
+  onError,
+  signal
+) {
+  return streamFetch(
+    '/api/chat',
+    { question, conversation_id },
+    onToken,
+    onError,
+    signal
+  )
 }
 
 // ==================== 会话管理 ====================
@@ -114,18 +140,23 @@ export async function createConversation(title = '新会话') {
     body: JSON.stringify({ title }),
   })
   if (handle401(resp)) return null
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
 export async function listConversations() {
   const resp = await fetch('/api/conversations', { headers: authHeaders() })
   if (handle401(resp)) return []
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
 export async function getConversationMessages(id) {
-  const resp = await fetch(`/api/conversations/${id}/messages`, { headers: authHeaders() })
+  const resp = await fetch(`/api/conversations/${id}/messages`, {
+    headers: authHeaders(),
+  })
   if (handle401(resp)) return []
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
@@ -140,24 +171,34 @@ export async function deleteConversation(id) {
 }
 
 // ==================== 代码剖析 ====================
-export function streamAnalyze({ code, language, question, assignment_id }, onToken, onError) {
+export function streamAnalyze(
+  { code, language, question, assignment_id },
+  onToken,
+  onError,
+  signal
+) {
   return streamFetch(
     '/api/code/analyze',
     { code, language, question, assignment_id },
     onToken,
-    onError
+    onError,
+    signal
   )
 }
 
 export async function listCodeAnalyses() {
   const resp = await fetch('/api/code/analyses', { headers: authHeaders() })
   if (handle401(resp)) return []
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
 export async function getCodeAnalysis(id) {
-  const resp = await fetch(`/api/code/analyses/${id}`, { headers: authHeaders() })
+  const resp = await fetch(`/api/code/analyses/${id}`, {
+    headers: authHeaders(),
+  })
   if (handle401(resp)) return null
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
@@ -175,6 +216,7 @@ export async function deleteCodeAnalysis(id) {
 export async function listClasses() {
   const resp = await fetch('/api/classes', { headers: authHeaders() })
   if (handle401(resp)) return { taught: [], joined: [] }
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
@@ -199,8 +241,11 @@ export async function joinClass(code) {
 }
 
 export async function listAssignments(classId) {
-  const resp = await fetch(`/api/classes/${classId}/assignments`, { headers: authHeaders() })
+  const resp = await fetch(`/api/classes/${classId}/assignments`, {
+    headers: authHeaders(),
+  })
   if (handle401(resp)) return []
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
@@ -215,14 +260,18 @@ export async function createAssignment(classId, payload) {
 }
 
 export async function getOverview(classId) {
-  const resp = await fetch(`/api/classes/${classId}/overview`, { headers: authHeaders() })
-  if (!resp.ok) return null
+  const resp = await fetch(`/api/classes/${classId}/overview`, {
+    headers: authHeaders(),
+  })
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
 export async function listMembers(classId) {
-  const resp = await fetch(`/api/classes/${classId}/members`, { headers: authHeaders() })
-  if (!resp.ok) return []
+  const resp = await fetch(`/api/classes/${classId}/members`, {
+    headers: authHeaders(),
+  })
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
@@ -230,13 +279,13 @@ export async function listSubmissions(assignmentId) {
   const resp = await fetch(`/api/assignments/${assignmentId}/submissions`, {
     headers: authHeaders(),
   })
-  if (!resp.ok) return []
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
 export async function getSubmission(id) {
   const resp = await fetch(`/api/submissions/${id}`, { headers: authHeaders() })
-  if (!resp.ok) return null
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
@@ -288,7 +337,9 @@ export async function getStudentDetail(classId, userId) {
 }
 
 export async function exportScores(classId) {
-  const resp = await fetch(`/api/classes/${classId}/export.csv`, { headers: authHeaders() })
+  const resp = await fetch(`/api/classes/${classId}/export.csv`, {
+    headers: authHeaders(),
+  })
   if (!resp.ok) throw new Error(await readError(resp))
   const blob = await resp.blob()
   const url = URL.createObjectURL(blob)
@@ -302,21 +353,23 @@ export async function exportScores(classId) {
 }
 
 export async function classMastery(classId) {
-  const resp = await fetch(`/api/classes/${classId}/mastery`, { headers: authHeaders() })
-  if (!resp.ok) return { items: [] }
+  const resp = await fetch(`/api/classes/${classId}/mastery`, {
+    headers: authHeaders(),
+  })
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
 export async function myMastery() {
   const resp = await fetch('/api/mastery/me', { headers: authHeaders() })
-  if (!resp.ok) return { items: [] }
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
 // ==================== 个人资料 ====================
 export async function getProfile() {
   const resp = await fetch('/api/profile', { headers: authHeaders() })
-  if (!resp.ok) return null
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
 
@@ -334,7 +387,10 @@ export async function changePassword(oldPassword, newPassword) {
   const resp = await fetch('/api/profile/password', {
     method: 'POST',
     headers: authHeaders({ 'Content-Type': 'application/json' }),
-    body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+    body: JSON.stringify({
+      old_password: oldPassword,
+      new_password: newPassword,
+    }),
   })
   if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
@@ -352,6 +408,6 @@ export async function ingestKnowledge() {
 
 export async function getKnowledgeStats() {
   const resp = await fetch('/api/knowledge/stats')
-  if (!resp.ok) return {}
+  if (!resp.ok) throw new Error(await readError(resp))
   return resp.json()
 }
