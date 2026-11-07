@@ -25,9 +25,9 @@ const label = computed(
   () =>
     ({
       loading: '正在检查服务状态',
-      setup: '开始前，连接你的 AI 助教',
+      setup: '开始前，先配置模型密钥',
       warn: '部分服务需要检查',
-      ok: '助教已就绪',
+      ok: '服务正常',
     })[level.value]
 )
 </script>
@@ -37,8 +37,6 @@ const label = computed(
       <span class="status-dot"></span><strong>{{ label }}</strong
       ><span v-if="level === 'setup'" class="status-summary"
         >配置个人密钥后，就能提问和诊断代码</span
-      ><span v-else-if="level === 'ok'" class="status-summary"
-        >随时开始你的下一次思考</span
       >
     </div>
     <div class="status-actions">

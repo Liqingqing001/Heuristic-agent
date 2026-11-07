@@ -26,7 +26,6 @@ const current = computed(() =>
       >
         <AppIcon name="code" :size="17" /> 代码诊断
       </button>
-      <span class="hint">从一个问题开始，让理解更进一步</span>
     </div>
 
     <KeepAlive>

@@ -13,7 +13,7 @@ const steps = computed(() =>
     ? [
         {
           title: '创建班级',
-          text: '邀请学生一起学习',
+          text: '生成邀请码，发给学生',
           done: props.hasClass,
           tab: 'workspace',
           action: 'create',
@@ -26,7 +26,7 @@ const steps = computed(() =>
         },
         {
           title: '发布第一个任务',
-          text: '让学习有一个起点',
+          text: '布置一次作业',
           done: props.hasAssignment,
           tab: 'workspace',
           action: 'publish',
@@ -47,7 +47,7 @@ const steps = computed(() =>
         },
         {
           title: '完成第一个任务',
-          text: '开始思考，收获反馈',
+          text: '在作业中心提交一次',
           done: props.hasAssignment,
           tab: 'homework',
         },
@@ -58,8 +58,7 @@ const steps = computed(() =>
   <section v-if="steps.some((s) => !s.done)" class="onboarding">
     <div class="section-heading">
       <div>
-        <span class="eyebrow">QUICK START</span>
-        <h3>从这里开始</h3>
+        <h3>快速开始</h3>
       </div>
       <span class="muted"
         >{{ steps.filter((s) => s.done).length }} / 3 已完成</span

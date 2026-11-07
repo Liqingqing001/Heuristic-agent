@@ -113,14 +113,6 @@ onActivated(load)
   />
 
   <div v-else class="home">
-    <div class="teacher-hello">
-      <div>
-        <span class="eyebrow">TEACHING OVERVIEW</span>
-        <h3>每一份反馈，都让理解更进一步</h3>
-        <p>关注学习进展，把时间留给最需要帮助的学生。</p>
-      </div>
-      <AppIcon name="chart" :size="46" />
-    </div>
     <OnboardingSteps
       teacher
       :has-class="!!classes.length"

@@ -217,7 +217,7 @@ onMounted(() => {
     <aside class="sidebar">
       <div class="brand">
         <span class="brand-mark">智</span>
-        <div><strong>数据结构智育助教</strong><small>让思考发生</small></div>
+        <div><strong>数据结构智育助教</strong><small>数据结构与算法</small></div>
       </div>
       <div class="nav-caption">
         {{ isTeacher ? '教学工作台' : '我的学习空间' }}
@@ -234,10 +234,6 @@ onMounted(() => {
           ><span v-if="activeTab === tab.key" class="nav-dot"></span>
         </button>
       </nav>
-      <div class="side-note">
-        <AppIcon name="light" :size="22" /><strong>每一次提问，都是进步</strong>
-        <p>从一个小问题开始，慢慢找到自己的答案。</p>
-      </div>
       <div class="side-foot">
         <button class="me" @click="activeTab = 'profile'">
           <span class="avatar">{{ avatarText }}</span
@@ -251,9 +247,6 @@ onMounted(() => {
     <main id="main-content" class="main" tabindex="-1">
       <header class="topbar">
         <div>
-          <span class="eyebrow">{{
-            isTeacher ? 'TEACHING WORKSPACE' : 'LEARNING WORKSPACE'
-          }}</span>
           <h1>
             {{ current.label }}<span>{{ current.description }}</span>
           </h1>
@@ -280,7 +273,7 @@ onMounted(() => {
             @open-settings="showSettings = true"
         /></KeepAlive>
       </section>
-      <footer class="page-footer">数据结构智育助教 · 引导思考，陪伴成长</footer>
+      <footer class="page-footer">数据结构智育助教</footer>
     </main>
     <nav class="mobile-nav" aria-label="移动端导航">
       <button
@@ -388,21 +381,6 @@ onMounted(() => {
   background: var(--primary);
   border-radius: 50%;
   margin-left: auto;
-}
-.side-note {
-  margin-top: auto;
-  padding: 22px 14px 24px;
-  color: var(--primary);
-}
-.side-note strong {
-  display: block;
-  font-size: 12px;
-  margin-top: 10px;
-}
-.side-note p {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.8;
 }
 .side-foot {
   border-top: 1px solid var(--border);

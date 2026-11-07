@@ -114,13 +114,10 @@ onActivated(load)
 
   <div v-else class="home">
     <div class="hello">
-      <div class="hero-label">一点点理解，一步步进步</div>
       <h3>{{ greeting }}，{{ displayName }}</h3>
       <p v-if="!classes.length">还没有加入班级，先向老师要一个邀请码。</p>
-      <p v-else-if="todos.length">
-        还有 {{ todos.length }} 个任务待完成，加油。
-      </p>
-      <p v-else>任务都完成了，可以去学习助手巩固一下。</p>
+      <p v-else-if="todos.length">还有 {{ todos.length }} 个任务待完成。</p>
+      <p v-else>任务都完成了。</p>
       <button
         class="hero-action"
         @click="emit('goto', todos.length ? 'homework' : 'assistant')"

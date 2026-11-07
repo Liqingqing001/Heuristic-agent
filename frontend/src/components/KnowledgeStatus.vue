@@ -171,11 +171,6 @@ onActivated(async () => {
 
 <template>
   <div class="kb">
-    <div class="kb-intro">
-      <span class="eyebrow">KNOWLEDGE LIBRARY</span>
-      <h3>让知识，连接起来</h3>
-      <p>查一个概念，理清一段思路，找到下一步的方向。</p>
-    </div>
     <!-- 顶部：返回 + 搜索 -->
     <div class="kb-header">
       <button v-if="viewMode !== 'home'" class="back-btn" @click="goHome">

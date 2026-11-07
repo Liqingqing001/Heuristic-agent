@@ -53,29 +53,19 @@ function switchMode() {
         <span class="brand-mark">智</span><strong>数据结构智育助教</strong>
       </div>
       <div class="story-content">
-        <span class="story-tag">你的数据结构学习伙伴</span>
-        <h1>答案之外，<br />还有更好的<span>思考方式。</span></h1>
-        <p>把复杂的问题拆小一点。<br />从理解一个指针，到掌握一种解法。</p>
+        <h1>数据结构与算法<br /><span>课程学习空间</span></h1>
         <div class="story-features">
           <span><AppIcon name="chat" :size="18" />启发式提问</span
           ><span><AppIcon name="code" :size="18" />代码诊断</span
           ><span><AppIcon name="chart" :size="18" />学习反馈</span>
         </div>
       </div>
-      <small>引导思考 · 理解原理 · 学会迁移</small>
     </section>
     <main class="login-main">
       <div class="login-card">
-        <span class="eyebrow">{{
-          mode === 'login' ? 'WELCOME BACK' : 'START YOUR JOURNEY'
-        }}</span>
-        <h2>{{ mode === 'login' ? '欢迎回来' : '开启你的学习旅程' }}</h2>
+        <h2>{{ mode === 'login' ? '登录' : '注册' }}</h2>
         <p class="sub">
-          {{
-            mode === 'login'
-              ? '登录账户，继续上一次的探索。'
-              : '选择身份，创建属于你的工作空间。'
-          }}
+          {{ mode === 'login' ? '使用你的账号登录' : '选择身份并创建账号' }}
         </p>
         <form @submit.prevent="submit" :aria-busy="loading">
           <fieldset v-if="mode === 'register'" class="role-picker">
@@ -148,11 +138,8 @@ function switchMode() {
             {{ mode === 'login' ? '立即注册' : '返回登录' }}
           </button>
         </p>
-        <div class="login-note">
-          <AppIcon name="light" :size="17" />我们提供启发，让你自己找到答案。
-        </div>
       </div>
-      <footer>数据结构智育助教 · 数据结构与算法学习空间</footer>
+      <footer>数据结构智育助教</footer>
     </main>
   </div>
 </template>

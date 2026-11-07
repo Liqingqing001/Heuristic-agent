@@ -202,7 +202,7 @@ onBeforeUnmount(() => controller?.abort())
           </button>
         </div>
         <div v-if="!conversations.length" class="empty-hint small">
-          你的思考，将从这里开始
+          暂无会话
         </div>
       </div>
     </aside>
@@ -217,8 +217,8 @@ onBeforeUnmount(() => controller?.abort())
           <span class="welcome-icon"
             ><AppIcon name="assistant" :size="30"
           /></span>
-          <h3>今天，想弄懂什么？</h3>
-          <p>描述你的疑问，我会陪你一步步梳理思路。</p>
+          <h3>开始对话</h3>
+          <p>输入你的问题，或选择一个示例：</p>
           <div class="question-suggestions">
             <button
               v-for="q in [
