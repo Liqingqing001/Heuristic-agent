@@ -50,7 +50,7 @@ function switchMode() {
   <div class="login-page">
     <section class="login-story">
       <div class="brand">
-        <span class="brand-mark">智</span><strong>智育助教</strong>
+        <span class="brand-mark">智</span><strong>数据结构智育助教</strong>
       </div>
       <div class="story-content">
         <span class="story-tag">你的数据结构学习伙伴</span>
@@ -152,7 +152,7 @@ function switchMode() {
           <AppIcon name="light" :size="17" />我们提供启发，让你自己找到答案。
         </div>
       </div>
-      <footer>智育助教 · 数据结构与算法学习空间</footer>
+      <footer>数据结构智育助教 · 数据结构与算法学习空间</footer>
     </main>
   </div>
 </template>

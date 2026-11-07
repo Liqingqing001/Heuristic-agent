@@ -211,14 +211,13 @@ onActivated(load)
     <section class="panel">
       <div class="panel-head">
         <h4>待批阅</h4>
-        <button class="link" @click="openGrading()">去批阅 →</button>
+        <button class="link" @click="openGrading(pending[0])">去批阅 →</button>
       </div>
       <div v-if="!pending.length" class="empty small">没有待批阅的提交。</div>
-      <button
+      <div
         v-for="item in pending.slice(0, 5)"
         :key="item.id"
         class="row pending-row"
-        @click="openGrading(item)"
       >
         <div>
           <div class="row-title">{{ item.assignment_title }}</div>
@@ -227,10 +226,7 @@ onActivated(load)
             <span>{{ formatTime(item.submitted_at) }}</span>
           </div>
         </div>
-        <span class="pending-link"
-          >批阅 <AppIcon name="arrow" :size="16"
-        /></span>
-      </button>
+      </div>
     </section>
   </div>
 </template>
@@ -308,17 +304,6 @@ onActivated(load)
   border-bottom: 1px solid var(--border);
   text-align: left;
   gap: 12px;
-}
-.pending-row:hover {
-  background: var(--surface);
-}
-.pending-link {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--primary);
-  font-size: 12px;
-  white-space: nowrap;
 }
 .fill {
   background: #e4ac5d !important;

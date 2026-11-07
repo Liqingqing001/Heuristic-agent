@@ -12,6 +12,9 @@ fastembed>=0.4
 
 chromadb>=0.4.24
 numpy>=1.26
+# chromadb 的 opentelemetry 依赖需要较新的 protobuf，否则会报
+# "cannot import name 'runtime_version'"（tensorflow 等包会把它降到 4.x）
+protobuf>=6.33.5,<7
 python-dotenv>=1.0
 pydantic>=2.7
 python-jose[cryptography]>=3.3

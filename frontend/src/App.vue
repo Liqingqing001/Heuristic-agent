@@ -217,7 +217,7 @@ onMounted(() => {
     <aside class="sidebar">
       <div class="brand">
         <span class="brand-mark">智</span>
-        <div><strong>智育助教</strong><small>让思考发生</small></div>
+        <div><strong>数据结构智育助教</strong><small>让思考发生</small></div>
       </div>
       <div class="nav-caption">
         {{ isTeacher ? '教学工作台' : '我的学习空间' }}
@@ -280,7 +280,7 @@ onMounted(() => {
             @open-settings="showSettings = true"
         /></KeepAlive>
       </section>
-      <footer class="page-footer">智育助教 · 引导思考，陪伴成长</footer>
+      <footer class="page-footer">数据结构智育助教 · 引导思考，陪伴成长</footer>
     </main>
     <nav class="mobile-nav" aria-label="移动端导航">
       <button
@@ -340,8 +340,9 @@ onMounted(() => {
 }
 .brand strong {
   display: block;
-  font-size: 19px;
-  letter-spacing: 1px;
+  font-size: 17px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 .brand small {
   display: block;
