@@ -7,6 +7,7 @@
 > 2026-11 优化：知识库参数校验、流式解析与测试隔离，详见 [`docs/优化记录-2026-11-03.md`](docs/优化记录-2026-11-03.md)。
 > UI 与体验更新（含截图）：[`docs/UI与体验优化-2026-11-03.md`](docs/UI与体验优化-2026-11-03.md)。
 > RAG 检索、索引升级与评测结果：[`docs/RAG优化-2026-11-03.md`](docs/RAG优化-2026-11-03.md)。已有部署升级后请教师重新建库，以启用新版向量索引。
+> 2026-11-17 索引实现更换（不再依赖 chromadb/hnswlib）：[`docs/索引实现改动-2026-11-17.md`](docs/索引实现改动-2026-11-17.md)。
 
 ---
 
@@ -43,8 +44,8 @@
 | 层 | 技术 |
 |---|---|
 | 大模型 | DeepSeek `deepseek-chat`（OpenAI 兼容，BYOK 透传） |
-| 向量化 | 本地 BGE `BAAI/bge-small-zh-v1.5`（sentence-transformers） |
-| 向量库 | ChromaDB（本地持久化，四个 collection：讲义/题解/Bug库/知识点） |
+| 向量化 | 本地 BGE `BAAI/bge-small-zh-v1.5`（fastembed / ONNX，可回退 sentence-transformers） |
+| 向量检索 | numpy 暴力余弦检索（索引按代存盘，**不依赖 chromadb / hnswlib**） |
 | 后端 | FastAPI + Uvicorn + SQLite（单库 `app.db`） |
 | 前端 | Vue3 + Vite（`marked` + `highlight.js`） |
 
@@ -158,7 +159,10 @@ backend/
       store.py            # 数据访问层
       auth.py             # JWT（SECRET_KEY 从环境变量或 .secret_key 读取）
       llm.py              # 模型客户端（支持按请求传 key）
-      rag.py              # 检索：向量优先，不可用时关键词降级
+      rag.py              # 检索：向量 + 词法融合，不可用时纯词法降级
+      rag_index.py        # 按代构建向量索引（vectors.npy + chunks.json + 原子 manifest）
+      retrieval.py        # BM25 词法召回、RRF 融合、文档多样性
+      corpus.py           # 知识库分块与快照（内容哈希 / 版本）
       embedding.py        # BGE 懒加载
     agents/
       prompts.py          # 人设 + 硬约束 + 三阶提示 + 结构化诊断协议
@@ -231,8 +235,9 @@ frontend/
 |---|---|
 | 顶部红色横幅"还没有可用的模型密钥" | 没填个人 key（默认严格 BYOK），点「模型设置」填写 |
 | 没填 key 为什么也能回答？ | 只有 `.env` 里设了 `ALLOW_SERVER_KEY=1` 才会用服务端 key 兜底；默认关闭，正常会直接报错 |
-| 建库报 `torch_python.dll` 加载失败 | Windows 应用控制策略（Smart App Control）拦截了 torch；检索会自动降级为关键词匹配，功能仍可用。彻底解决见 `docs/本次改动.md` |
-| 建库报 `np.float_ was removed` | numpy 2.x 与 chromadb 0.4.x 不兼容，`app/core/rag.py` 已加兼容垫片 |
+| 建库报 `torch_python.dll` 加载失败 | Windows 应用控制策略（Smart App Control）拦截了 torch；向量化已改用 ONNX，正常不会再有此报错，检索也会自动降级为关键词匹配 |
+| 建库报 `hnswlib` 加载失败 | 旧版用 chromadb→hnswlib，原生 DLL 会被 Smart App Control 拦截；现已改为 numpy 索引，不再依赖 hnswlib，见 `docs/索引实现改动-2026-11-17.md` |
+| 知识库页四类计数都是 0 | 还没有活动索引（或升级后索引格式变了）：教师点一次「重新建库」。检索此时走词法降级，功能仍可用 |
 | 打开 8000 端口白屏 | 未 `npm run build` 或 `dist` 过期 |
 | 登录后提示"用户不存在" | 切换过 SECRET_KEY，旧 token 失效，重新登录 |
 | 建库后知识点仍是 0 | kp 内容还没写完：`py scripts\check_kp.py` 可以看到进度 |

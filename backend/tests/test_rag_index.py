@@ -1,8 +1,11 @@
-"""真实临时 Chroma + 假向量，测试索引事务，不下载模型。"""
+"""真实临时索引目录 + 假向量，测试索引事务，不下载模型。"""
 import json
 import pytest
 from app import config
 from app.core import embedding, rag
+
+def generations():
+    return {p.name for p in config.VECTOR_DB_DIR.glob('gen-*')}
 
 @pytest.fixture
 def index_env(tmp_path, monkeypatch):
@@ -45,13 +48,13 @@ def test_failed_build_keeps_active_generation(index_env, monkeypatch):
     knowledge, _ = index_env
     rag.ingest()
     before = manifest()
-    names_before = {c.name for c in rag.get_db().list_collections()}
+    dirs_before = generations()
     (knowledge / 'lecture' / '队列.md').write_text('# 队列\n先进先出。', encoding='utf-8')
     def fail(texts): raise RuntimeError('simulated failure')
     monkeypatch.setattr(embedding, 'embed_texts', fail)
     with pytest.raises(RuntimeError): rag.ingest()
     assert manifest() == before
-    assert {c.name for c in rag.get_db().list_collections()} == names_before
+    assert generations() == dirs_before
     assert rag.stats() == before['counts']
     assert rag.retrieval_status()['index_state'] == 'stale'
 

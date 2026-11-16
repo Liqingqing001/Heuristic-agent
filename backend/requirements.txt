@@ -1,5 +1,5 @@
 # 智育助教 Agent 后端依赖
-# 本机已验证：fastapi / chromadb 0.4.24 / openai 2.x / fastembed 0.9.1
+# 本机已验证：fastapi / openai 2.x / fastembed 0.9.1 / numpy 2.x
 
 fastapi>=0.110
 uvicorn[standard]>=0.30
@@ -10,9 +10,10 @@ fastembed>=0.4
 # 可选回退：没装 fastembed 时才会用到，需要 torch（约 2GB）
 # sentence-transformers>=3.0
 
-chromadb>=0.4.24
+# 向量检索：numpy 暴力余弦检索。课程语料只有几百个分块，不需要近似最近邻；
+# 同时避免 chromadb→hnswlib 这类原生扩展被 Windows 应用控制策略拦截。
 numpy>=1.26
-# chromadb 的 opentelemetry 依赖需要较新的 protobuf，否则会报
+# 部分依赖（grpc / onnxruntime 相关）需要较新的 protobuf，否则会报
 # "cannot import name 'runtime_version'"（tensorflow 等包会把它降到 4.x）
 protobuf>=6.33.5,<7
 python-dotenv>=1.0

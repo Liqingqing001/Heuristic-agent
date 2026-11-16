@@ -1,20 +1,16 @@
 """课程 RAG：共享分块、BM25 + 向量召回、RRF 融合与可恢复降级。
 
-词法模式不加载任何模型。向量索引按代发布；只接受仍存在于当前知识库、
-内容哈希一致的片段，避免修改或删除文件后继续引用旧内容。
+词法模式不加载任何模型。向量索引按代发布（numpy 矩阵，不依赖
+chromadb/hnswlib）；只接受仍存在于当前知识库、内容哈希一致的片段，
+避免修改或删除文件后继续引用旧内容。
 """
 from __future__ import annotations
 
 import logging
-import os
 import threading
 import time
 
-os.environ.setdefault('ANONYMIZED_TELEMETRY', 'False')
 import numpy as _np
-if not hasattr(_np, 'float_'):
-    _np.float_ = _np.float64
-import chromadb
 
 from app import config
 from app.core import corpus, embedding, rag_index
@@ -24,23 +20,10 @@ logger = logging.getLogger(__name__)
 KP_COLLECTION = 'kp_points'
 COLLECTIONS = list(rag_index.COLLECTIONS)
 split_markdown = corpus.split_markdown
-_client = None
-_client_path = None
-_client_lock = threading.Lock()
 _health_lock = threading.Lock()
 _retry_after = 0.0
 _vector_error = None
 _last_mode = 'not_used'
-
-
-def get_db():
-    global _client, _client_path
-    path = str(config.VECTOR_DB_DIR)
-    with _client_lock:
-        if _client is None or _client_path != path:
-            _client = chromadb.PersistentClient(path=path)
-            _client_path = path
-        return _client
 
 
 def reset_retrieval() -> dict:
@@ -63,7 +46,7 @@ def _failed(exc: Exception):
 
 def ingest() -> dict:
     snapshot = corpus.snapshot()
-    result = rag_index.build(get_db(), config.VECTOR_DB_DIR, snapshot)
+    result = rag_index.build(config.VECTOR_DB_DIR, snapshot)
     reset_retrieval()
     return result
 
@@ -83,28 +66,34 @@ def _vector_candidates(query, chunks, cats, limit):
     manifest = rag_index.read_manifest(config.VECTOR_DB_DIR)
     if not manifest:
         return [], None
-    # 同一查询只计算一次向量，四个知识分类共用。
-    vector = embedding.embed_query(query)
     if manifest['model_signature'] != embedding.model_signature():
         raise ValueError('模型或向量后端已变化，需要重新建库')
+    matrix, metas = rag_index.load_generation(config.VECTOR_DB_DIR, manifest)
+    if not len(metas):
+        return [], manifest
+    # 同一查询只计算一次向量。
+    vector = _np.asarray(embedding.embed_query(query), dtype='float32')
     current = {c['chunk_id']: c for c in chunks}
-    db = get_db()
-    candidates = []
-    for category in sorted(cats):
-        coll = db.get_collection(name=manifest['collections'][category])
-        count = coll.count()
-        if not count:
+    rows, picked = [], []
+    for index, meta in enumerate(metas):
+        chunk = current.get(meta.get('chunk_id'))
+        if not chunk or meta.get('content_hash') != chunk['content_hash']:
             continue
-        data = coll.query(query_embeddings=[vector], n_results=min(limit, count), include=['metadatas', 'distances'])
-        for chunk_id, meta, distance in zip(data['ids'][0], data['metadatas'][0], data['distances'][0]):
-            chunk = current.get(chunk_id)
-            if not chunk or not meta or meta.get('content_hash') != chunk['content_hash']:
-                continue
-            if distance is None or not _np.isfinite(distance) or distance > config.RAG_MAX_DISTANCE:
-                continue
-            candidates.append({**chunk, 'vector_distance': float(distance)})
-    candidates.sort(key=lambda item: item['vector_distance'])
-    return candidates[:limit], manifest
+        rows.append(index)
+        picked.append(chunk)
+    if not rows:
+        return [], manifest
+    distances = 1.0 - _np.asarray(matrix[_np.asarray(rows)] @ vector, dtype='float64')
+    order = _np.argsort(distances)[:limit]
+    candidates = []
+    for position in order:
+        distance = float(distances[position])
+        if not _np.isfinite(distance):
+            continue
+        if distance > config.RAG_MAX_DISTANCE:
+            break
+        candidates.append({**picked[int(position)], 'vector_distance': distance})
+    return candidates, manifest
 
 
 def search(query: str, categories: list[str] | None = None, top_k: int = config.TOP_K,
@@ -155,7 +144,10 @@ def _lexical_search(query, cats, top_k):
 
 def stats() -> dict:
     """保留原四分类计数响应；统计不加载 embedding，也不隐式建库。"""
-    manifest = rag_index.read_manifest(config.VECTOR_DB_DIR)
+    try:
+        manifest = rag_index.read_manifest(config.VECTOR_DB_DIR)
+    except (ValueError, OSError):
+        manifest = None
     return dict(manifest['counts']) if manifest else {c: 0 for c in COLLECTIONS}
 
 
