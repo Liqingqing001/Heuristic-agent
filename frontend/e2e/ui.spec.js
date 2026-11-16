@@ -142,7 +142,7 @@ test('退回重做进入首页待办，问答任务可直接定位并保留答�
   await expect(page.getByLabel('你的作业答案')).toHaveValue('保留这份问答草稿')
 })
 
-test('教师首页直达指定提交的批阅弹窗', async ({ page, request }) => {
+test('教师首页待批阅直达批阅弹窗', async ({ page, request }) => {
   // 再次提交，恢复为待批阅状态。
   await json(
     await request.post(`/api/assignments/${question.id}/submit`, {
@@ -151,20 +151,28 @@ test('教师首页直达指定提交的批阅弹窗', async ({ page, request }) 
     })
   )
   await login(page, teacher)
-  await page.locator('.pending-row').filter({ hasText: question.title }).click()
+  // 待批阅列表的行只做展示，跳转入口是标题栏的「去批阅 →」。
+  await expect(page.locator('.pending-row').first()).toContainText(question.title)
+  await page.getByRole('button', { name: /去批阅/ }).click()
+  // 落到班级管理页，并直接打开该提交的批阅弹窗。
+  await expect(page.locator('.teacher-panel')).toBeVisible()
   await expect(page.getByRole('dialog')).toBeVisible()
   await expect(page.getByRole('dialog')).toContainText('界面测试学生')
   await expect(page.getByRole('dialog')).toContainText(question.title)
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)
+  // 提交列表仍定位在该任务上，可再次从列表打开批阅。
   await page
     .locator('#submission-list')
     .getByRole('button', { name: '批阅', exact: true })
     .first()
     .click()
   await expect(page.getByRole('dialog')).toBeVisible()
+  await page.keyboard.press('Escape')
   await page.goto('/#/home')
-  await expect(page.locator('.teacher-hello')).toBeVisible()
+  // 回到教师首页：班级跳转入口与关键指标都在
+  await expect(page.getByRole('button', { name: /进入班级管理/ })).toBeVisible()
+  await expect(page.locator('.stat').first()).toBeVisible()
   await expect
     .poll(() => page.evaluate(() => document.body.style.overflow))
     .toBe('')
