@@ -1,0 +1,10 @@
+RAG 检索评测 · lexical / all · top-3 · 32 个问题
+  hit_at_k: 1.0000
+  recall_at_k: 0.8218
+  mrr: 0.9425
+  returned_precision: 0.8161
+  no_answer_accuracy: 1.0000
+  latency_p50_ms: 3.7280
+  latency_p95_ms: 4.5050
+  实际检索模式: {"lexical": 87}
+  未命中/未拒答: 无

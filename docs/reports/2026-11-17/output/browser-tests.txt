@@ -1,0 +1,18 @@
+
+> socratic-tutor-frontend@1.0.0 test:e2e
+> playwright test --reporter=line
+
+
+Running 10 tests using 1 worker
+
+[1/10] e2e/ui.spec.js:80:1 › 登录表单标签、密码显隐和真实登录
+[2/10] e2e/ui.spec.js:93:1 › 主页面和助手模式切换保留草稿，编辑器延迟加载
+[3/10] e2e/ui.spec.js:114:1 › 退回重做进入首页待办，问答任务可直接定位并保留答案草稿
+[4/10] e2e/ui.spec.js:145:1 › 教师首页待批阅直达批阅弹窗
+[5/10] e2e/ui.spec.js:182:1 › 手机导航、设置入口、弹窗焦点与各页面不横向溢出
+[6/10] e2e/ui.spec.js:213:1 › 聊天网络失败后可重试，引用可直达知识点
+[7/10] e2e/ui.spec.js:232:1 › 中文输入法确认不发送，生成可以停止并恢复发送按钮
+[8/10] e2e/ui.spec.js:258:1 › 加载失败显示重试，恢复后正常显示数据
+[9/10] e2e/ui.spec.js:269:1 › 教师登录过期后换学生登录回到学生首页
+[10/10] e2e/ui.spec.js:281:1 › 讲义引用直达来源章节，不依赖知识点编号
+  10 passed (6.1s)
