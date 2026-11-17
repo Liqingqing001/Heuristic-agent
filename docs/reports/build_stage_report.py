@@ -117,7 +117,8 @@ const path = require('path');
  await page.getByRole('button',{name:'进入班级管理',exact:true}).waitFor(); await shot('teacher-home');
  await page.getByRole('button',{name:/去批阅/}).click();
  await page.locator('.teacher-panel').waitFor();
- await page.locator('#submission-list').getByRole('button',{name:'批阅',exact:true}).first().click();
+ await page.waitForTimeout(500);
+ if(!await page.getByRole('dialog').isVisible()) await page.locator('#submission-list').getByRole('button',{name:'批阅',exact:true}).first().click();
  await page.getByRole('dialog').waitFor();
  await shot('grading','[role="dialog"]');
  await page.keyboard.press('Escape'); await shot('teacher-workspace');
@@ -237,7 +238,7 @@ def feature(title,shot,items,body,caption="本次构建采集 · 临时演示数
 def build_deck():
     counts=evidence["test_counts"]
     s=page("数据结构智育助教", "新阶段进展与系统架构", "面向《数据结构与算法》的启发式课程助教")
-    text(s,"从功能跑通\n走向检索可靠与教学闭环",.8,2.0,4.55,1.65,31,INK,True)
+    text(s,"从功能跑通\n走向检索可靠与教学闭环",.8,2.0,4.55,1.65,28,INK,True)
     text(s,"学生学习空间 · 教师教学工作台\n课程知识支持 · 苏格拉底式引导",.82,4.03,4.2,1.0,19,MUTED)
     text(s,"汇报日期 2026.11.17\n源码依据 f1396f1（含 NumPy 索引更新）",.82,5.58,4.3,.9,13,BLUE)
     image(s,"student-home",5.5,1.9,7.1,4.7,"项目实际界面；所有班级和提交均为演示样例")
@@ -262,14 +263,14 @@ def build_deck():
     note(s,"业务组织架构","这里的组织架构指系统内角色、功能模块与服务的分工，不虚构团队人员分工。学生和教师拥有不同入口与操作权限，底层共享认证、课程资料、检索、模型调用和数据记录。教师承担人工教学判断；AI 提供启发与诊断线索，未承担自动判题职责。")
 
     feature("学生学习空间：任务优先，反馈可见","student-home",
-        [("待办与截止时间","优先处理退回任务，再按截止时间组织待办。"),("提交与教师反馈","查看提交状态、分数、评语和历史内容。"),("薄弱知识点","依据诊断信号展示学习参考，支持跳转知识点。")],
+        [("待办与截止时间","优先处理退回任务，再按截止时间组织待办。"),("提交与教师反馈","查看提交状态、分数、评语和提交内容。"),("薄弱知识点","依据诊断信号展示学习参考，支持跳转知识点。")],
         "学生首页把待办任务、最近提交和知识点参考集中到一页。退回重做需要重新进入待办，不能仅用“是否提交过”来判断任务是否完成。知识点掌握度由诊断提示层级和严重程度等信号估算，不是经教学测量验证的精确分数。")
 
     s=page("作业中心：从提交记录回到可执行的下一步","学生模块","代码类进入诊断，问答类在任务内提交；教师退回后可重新完成")
     image(s,"homework",.75,1.92,5.75,4.25,"任务分类与详情")
     image(s,"my-feedback",6.85,1.92,5.75,4.25,"已批阅提交：分数、评语与原始内容")
     text(s,"待提交 → 待批阅 → 已批阅；被退回的任务进入“待重做”",.85,6.52,11.9,.35,16,BLUE,True)
-    note(s,"作业中心","展示左侧的任务列表与右侧详情，并说明问答类和代码类的不同提交入口。右图展示种子演示数据中的教师分数和评语，这些不是本次模型生成结果，更不代表真实班级成绩。闭环的重点是学生能根据反馈重做，教师能查看前后的提交内容。")
+    note(s,"作业中心","展示左侧的任务列表与右侧详情，并说明问答类和代码类的不同提交入口。右图展示种子演示数据中的教师分数和评语，这些不是本次模型生成结果，更不代表真实班级成绩。闭环的重点是学生能根据反馈重做，教师能查看当前提交与反馈。")
 
     feature("教师工作台：把班级进度与待批阅集中起来","teacher-home",
         [("班级概览","学生人数、任务数、提交率与每日趋势。"),("待批阅入口","从首页进入班级与任务，定位需要处理的提交。"),("学情参考","查看错因、知识点和学生进度，支持成绩导出。")],
@@ -297,7 +298,7 @@ def build_deck():
     for i,(head,body,col) in enumerate(layers):
         y=1.93+i*1.08
         shape(s,.8,y,8.0,.87,"FFFFFF",LINE,True);shape(s,.8,y,.07,.87,col)
-        text(s,head,1.0,y+.13,1.65,.5,17,col,True);text(s,body,2.8,y+.16,5.7,.52,15,INK)
+        text(s,head,1.0,y+.13,1.65,.5,17,col,True);text(s,body,2.8,y+.16,5.7,.62,14,INK)
         if i<3: text(s,"↓",4.25,y+.86,.7,.23,16,BLUE,align=PP_ALIGN.CENTER)
     image(s,"assistant",9.12,1.95,3.4,2.05,"交互入口")
     image(s,"knowledge-detail",9.12,4.43,3.4,1.9,"课程资料入口")
@@ -308,8 +309,11 @@ def build_deck():
     card(s,"输入处理","短追问补充学生上下文\n代码先提取指针、内存、递归线索",.8,1.9,3.4,1.6)
     card(s,"BM25 词法召回","中文二字组 / 代码标识符\n标题、章节权重与确定性别名",4.6,1.9,3.6,1.6)
     card(s,"向量召回","BGE 查询向量仅计算一次\n归一化矩阵 × 查询；距离过滤",4.6,3.85,3.6,1.6)
+    shape(s,4.32,2.67,.018,1.9,BLUE)
     arrow(s,4.22,2.55);arrow(s,4.22,4.45)
     card(s,"融合与教学证据","RRF → 去重 / 多样性\n类别配额 → 预算 → 可追溯引用",8.62,2.9,3.85,1.85)
+    shape(s,8.34,2.7,.018,1.95,BLUE)
+    shape(s,8.2,2.7,.15,.018,BLUE);shape(s,8.2,4.63,.15,.018,BLUE)
     arrow(s,8.22,3.65)
     image(s,"knowledge-detail",.8,3.86,3.4,1.95,"实际课程知识点页面")
     text(s,"默认 hint 内容层级；无足够证据可返回空，提示助教澄清，而不是强行引用",4.62,5.93,7.8,.75,15,BLUE)
