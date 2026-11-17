@@ -15,4 +15,4 @@ Running 10 tests using 1 worker
 [8/10] e2e/ui.spec.js:258:1 › 加载失败显示重试，恢复后正常显示数据
 [9/10] e2e/ui.spec.js:269:1 › 教师登录过期后换学生登录回到学生首页
 [10/10] e2e/ui.spec.js:281:1 › 讲义引用直达来源章节，不依赖知识点编号
-  10 passed (6.3s)
+  10 passed (7.7s)

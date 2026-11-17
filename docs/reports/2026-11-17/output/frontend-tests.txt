@@ -6,47 +6,47 @@ TAP version 13
 # Subtest: 提交状态与待办语义一致，退回任务需要重做
 ok 1 - 提交状态与待办语义一致，退回任务需要重做
   ---
-  duration_ms: 0.864811
+  duration_ms: 0.741777
   ...
 # Subtest: 退回任务优先，其次按截止日期排序，且不修改原始列表
 ok 2 - 退回任务优先，其次按截止日期排序，且不修改原始列表
   ---
-  duration_ms: 5.711819
+  duration_ms: 4.952095
   ...
 # Subtest: 解析跨字节中文与换行 "\\n"
 ok 3 - 解析跨字节中文与换行 "\\n"
   ---
-  duration_ms: 6.743821
+  duration_ms: 5.475042
   ...
 # Subtest: 解析跨字节中文与换行 "\\r\\n"
 ok 4 - 解析跨字节中文与换行 "\\r\\n"
   ---
-  duration_ms: 1.666484
+  duration_ms: 2.288411
   ...
 # Subtest: 解析跨字节中文与换行 "\\r"
 ok 5 - 解析跨字节中文与换行 "\\r"
   ---
-  duration_ms: 1.412114
+  duration_ms: 1.343192
   ...
 # Subtest: 多行 data 事件；忽略未以空行结束的事件
 ok 6 - 多行 data 事件；忽略未以空行结束的事件
   ---
-  duration_ms: 0.328213
+  duration_ms: 0.289165
   ...
 # Subtest: done 后取消未结束的流并释放锁
 ok 7 - done 后取消未结束的流并释放锁
   ---
-  duration_ms: 0.512563
+  duration_ms: 0.500172
   ...
 # Subtest: 回调失败仍释放流
 ok 8 - 回调失败仍释放流
   ---
-  duration_ms: 0.593111
+  duration_ms: 0.522346
   ...
 # Subtest: 读取失败仍释放锁
 ok 9 - 读取失败仍释放锁
   ---
-  duration_ms: 0.829532
+  duration_ms: 0.89058
   ...
 1..9
 # tests 9
@@ -56,4 +56,4 @@ ok 9 - 读取失败仍释放锁
 # cancelled 0
 # skipped 0
 # todo 0
-# duration_ms 59.805129
+# duration_ms 54.966658

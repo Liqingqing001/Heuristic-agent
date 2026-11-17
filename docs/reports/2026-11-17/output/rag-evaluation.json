@@ -11,8 +11,8 @@
     "mrr": 0.9425287356321839,
     "returned_precision": 0.8160919540229885,
     "no_answer_accuracy": 1,
-    "latency_p50_ms": 3.697,
-    "latency_p95_ms": 4.48
+    "latency_p50_ms": 3.079,
+    "latency_p95_ms": 3.711
   },
   "retrieval_modes": {
     "lexical": 87
@@ -63,7 +63,7 @@
           "distance": 0.12857142857142867
         }
       ],
-      "latency_ms": 77.589
+      "latency_ms": 74.012
     },
     {
       "id": "kp02",
@@ -111,7 +111,7 @@
           "distance": 0.046875
         }
       ],
-      "latency_ms": 4.14
+      "latency_ms": 3.543
     },
     {
       "id": "kp03",
@@ -159,7 +159,7 @@
           "distance": 0.0757575757575758
         }
       ],
-      "latency_ms": 3.817
+      "latency_ms": 3.238
     },
     {
       "id": "kp04",
@@ -207,7 +207,7 @@
           "distance": 0.08955223880597019
         }
       ],
-      "latency_ms": 3.693
+      "latency_ms": 3.098
     },
     {
       "id": "kp05",
@@ -255,7 +255,7 @@
           "distance": 0.031746031746031855
         }
       ],
-      "latency_ms": 3.647
+      "latency_ms": 3.046
     },
     {
       "id": "kp06",
@@ -301,7 +301,7 @@
           "distance": 0.046875
         }
       ],
-      "latency_ms": 3.456
+      "latency_ms": 2.906
     },
     {
       "id": "kp07",
@@ -348,7 +348,7 @@
           "distance": 0.046875
         }
       ],
-      "latency_ms": 3.899
+      "latency_ms": 3.238
     },
     {
       "id": "kp08",
@@ -394,7 +394,7 @@
           "distance": 0.16438356164383572
         }
       ],
-      "latency_ms": 3.708
+      "latency_ms": 3.078
     },
     {
       "id": "kp09",
@@ -442,7 +442,7 @@
           "distance": 0.0757575757575758
         }
       ],
-      "latency_ms": 3.965
+      "latency_ms": 3.293
     },
     {
       "id": "kp10",
@@ -490,7 +490,7 @@
           "distance": 0.0757575757575758
         }
       ],
-      "latency_ms": 4.432
+      "latency_ms": 3.705
     },
     {
       "id": "kp11",
@@ -538,7 +538,7 @@
           "distance": 0.031746031746031855
         }
       ],
-      "latency_ms": 3.627
+      "latency_ms": 3.026
     },
     {
       "id": "kp12",
@@ -585,7 +585,7 @@
           "distance": 0.031746031746031855
         }
       ],
-      "latency_ms": 3.718
+      "latency_ms": 3.076
     },
     {
       "id": "kp13",
@@ -633,7 +633,7 @@
           "distance": 0.031746031746031855
         }
       ],
-      "latency_ms": 3.61
+      "latency_ms": 3.017
     },
     {
       "id": "kp14",
@@ -681,7 +681,7 @@
           "distance": 0.06153846153846154
         }
       ],
-      "latency_ms": 3.829
+      "latency_ms": 3.207
     },
     {
       "id": "kp15",
@@ -729,7 +729,7 @@
           "distance": 0.031746031746031855
         }
       ],
-      "latency_ms": 3.692
+      "latency_ms": 3.065
     },
     {
       "id": "kp16",
@@ -777,7 +777,7 @@
           "distance": 0.20779220779220775
         }
       ],
-      "latency_ms": 3.738
+      "latency_ms": 3.11
     },
     {
       "id": "kp17",
@@ -825,7 +825,7 @@
           "distance": 0.1527777777777779
         }
       ],
-      "latency_ms": 3.532
+      "latency_ms": 2.957
     },
     {
       "id": "kp18",
@@ -872,7 +872,7 @@
           "distance": 0.17567567567567566
         }
       ],
-      "latency_ms": 3.539
+      "latency_ms": 2.946
     },
     {
       "id": "kp19",
@@ -919,7 +919,7 @@
           "distance": 0.06153846153846154
         }
       ],
-      "latency_ms": 3.531
+      "latency_ms": 2.973
     },
     {
       "id": "kp20",
@@ -967,7 +967,7 @@
           "distance": 0.031746031746031855
         }
       ],
-      "latency_ms": 4.023
+      "latency_ms": 3.361
     },
     {
       "id": "bug01",
@@ -1013,7 +1013,7 @@
           "distance": 0.031746031746031855
         }
       ],
-      "latency_ms": 3.831
+      "latency_ms": 3.197
     },
     {
       "id": "bug02",
@@ -1060,7 +1060,7 @@
           "distance": 0.06153846153846154
         }
       ],
-      "latency_ms": 3.562
+      "latency_ms": 2.982
     },
     {
       "id": "bug03",
@@ -1107,7 +1107,7 @@
           "distance": 0.031746031746031855
         }
       ],
-      "latency_ms": 3.701
+      "latency_ms": 3.089
     },
     {
       "id": "bug04",
@@ -1153,7 +1153,7 @@
           "distance": 0.031746031746031855
         }
       ],
-      "latency_ms": 3.65
+      "latency_ms": 3.08
     },
     {
       "id": "bug05",
@@ -1200,7 +1200,7 @@
           "distance": 0.06153846153846154
         }
       ],
-      "latency_ms": 3.939
+      "latency_ms": 3.278
     },
     {
       "id": "bug06",
@@ -1246,7 +1246,7 @@
           "distance": 0.031746031746031855
         }
       ],
-      "latency_ms": 3.626
+      "latency_ms": 3.013
     },
     {
       "id": "alias01",
@@ -1294,7 +1294,7 @@
           "distance": 0.0757575757575758
         }
       ],
-      "latency_ms": 3.892
+      "latency_ms": 3.22
     },
     {
       "id": "alias02",
@@ -1341,7 +1341,7 @@
           "distance": 0.11594202898550732
         }
       ],
-      "latency_ms": 3.485
+      "latency_ms": 2.92
     },
     {
       "id": "long01",
@@ -1389,7 +1389,7 @@
           "distance": 0.031746031746031855
         }
       ],
-      "latency_ms": 4.538
+      "latency_ms": 3.719
     },
     {
       "id": "none01",
@@ -1403,7 +1403,7 @@
       "returned_precision": null,
       "correct_abstention": true,
       "results": [],
-      "latency_ms": 3.161
+      "latency_ms": 2.676
     },
     {
       "id": "none02",
@@ -1417,7 +1417,7 @@
       "returned_precision": null,
       "correct_abstention": true,
       "results": [],
-      "latency_ms": 3.152
+      "latency_ms": 2.653
     },
     {
       "id": "none03",
@@ -1431,7 +1431,7 @@
       "returned_precision": null,
       "correct_abstention": true,
       "results": [],
-      "latency_ms": 3.212
+      "latency_ms": 2.671
     }
   ],
   "limits": "检索文档相关性标注；不评估大模型答案质量。延迟包含首个请求的冷启动，不代表线上并发性能。",
