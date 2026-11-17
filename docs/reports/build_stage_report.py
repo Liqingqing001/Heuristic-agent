@@ -362,6 +362,54 @@ def build_deck():
     text(s,"重点回归\n• 删除 / 修改资料不引用旧块\n• 建库失败保留活动索引\n• 草稿保留与网络恢复\n• 角色切换、弹窗与引用跳转",10.0,3.56,2.55,2.6,15,INK)
     note(s,"质量保障","测试覆盖教学流程、角色限制、索引发布、失败恢复、分块和融合等行为；浏览器回归还检查任务直达、草稿、停止生成、引用跳转和手机布局。数量不是覆盖率，更不能代表模型回答质量。本页截图和计数是此次仓库自动构建生成。")
 
+    # ---- 模型接入现状：为什么曾经要求使用者自带密钥
+    s=page("接入现状：先用使用者自己的密钥把流程跑通","模型接入",
+        "严格 BYOK：不填个人密钥就无法调用模型。这是当时的工程取舍，不是终态设计")
+    text(s,"现在的链路",.8,1.86,5.5,.35,15,BLUE,True)
+    for i,(head,body) in enumerate([("登录并使用","学生 / 教师账号，与密钥无关"),
+            ("打开「模型设置」","右上角入口，任意页面可访问"),
+            ("填写自己的 API Key","默认掩码显示；可选记住本机"),
+            ("请求携带 X-LLM-Key","缺 key 直接拒绝，服务端不代调")]):
+        y=2.24+i*.92
+        shape(s,.8,y,5.5,.8,"FFFFFF",LINE,True)
+        text(s,f"{i+1:02d}",.95,y+.18,.45,.35,15,BLUE,True)
+        text(s,head,1.45,y+.1,2.3,.3,15,INK,True)
+        text(s,body,1.45,y+.42,4.7,.3,12,MUTED)
+    text(s,"当时为什么这样选",6.85,1.86,5.5,.35,15,BLUE,True)
+    for i,(head,body) in enumerate([("实现最省","一个请求头 + 十几行代码\n不需要账号与支付体系"),
+            ("没有付费体系","学生不付费、学校不报销\n没有充值与退款流程"),
+            ("没有配额会失控","演示 key 被整班共用\n一天就能刷掉整月额度"),
+            ("密钥责任最小","密钥不落服务器与数据库\n泄露面只剩使用者本机")]):
+        card(s,head,body,6.85+(i%2)*3.0,2.24+(i//2)*1.62,2.85,1.52,num=f"{i+1}")
+    text(s,"代价：学生要自己注册并充值；教师看不到班级用量；没有 token 记录，也就没有成本与效果数据",.85,6.08,11.8,.35,13,AMBER,True)
+    text(s,"服务端默认 ALLOW_SERVER_KEY=0：仓库里不保存任何密钥，也不替使用者付费",.85,6.5,11.8,.3,12,TEAL)
+    note(s,"接入现状","这一页正面回答“为什么要学生自己配密钥”。当前是严格 BYOK：密钥由使用者在「模型设置」里填写，只存在浏览器会话或本机存储，请求通过 X-LLM-Key 头校验，服务端默认关闭统一密钥（ALLOW_SERVER_KEY=0）。"
+        "当初这样做的原因有四条：实现成本最低；没有面向学生的收费与退款体系；服务端统一密钥若没有配额，一个演示 key 会被整班共用、额度很快被刷光；密钥不落服务器，责任与泄露面最小。"
+        "必须承认代价：学生要自己注册充值才能用，教师无法查看班级用量，系统也没有 token 记录，因此没有成本与学习效果的量化数据。这不是设计目标，是当时的取舍。")
+
+    # ---- 改进方案：三步改造
+    s=page("改进方案：从自带密钥走到学生零配置","改进方案",
+        "先止血、再托管、最后治理；三步可分别上线，密钥优先级 个人 > 班级 > 服务端")
+    for i,(head,body,cost,col) in enumerate([
+            ("阶段一 · 统一密钥 + 配额","服务端持演示密钥，按用户按日记账\n超限直接拒绝，避免额度被单点刷光","1–2 天 · 学生直接用",BLUE),
+            ("阶段二 · 班级密钥托管","教师上传班级密钥，AES-GCM 加密存储\n学生请求自动带，教师承担班级费用","3–4 天 · 教师承担费用",TEAL),
+            ("阶段三 · 统一 LLM 网关","统一出口，多供应商切换与限流\n记录 token 与延迟，便于审计","1–2 周 · 可审计可切换",BLUE)]):
+        x=.8+i*4.1
+        shape(s,x,1.95,3.75,2.95,"FFFFFF",LINE,True)
+        shape(s,x,1.95,3.75,.07,col)
+        text(s,head,x+.22,2.16,3.35,.45,17,INK,True)
+        text(s,body,x+.22,2.78,3.35,1.1,13,MUTED)
+        text(s,f"落地成本 {cost}",x+.22,4.06,3.35,.3,12,col,True)
+    shape(s,.8,5.12,11.85,1.05,"FFFFFF",LINE,True)
+    text(s,"目标状态",1.0,5.26,1.6,.3,14,BLUE,True)
+    text(s,"学生注册后即可对话与代码诊断，无需自备密钥；教师能看到班级用量与额度；所有调用都有 token 与成本记录",2.4,5.24,9.9,.4,14,INK)
+    text(s,"风险对策：密钥加密存储、按日/按月双配额、超限降级为纯检索回答（不调用模型）、留一键停用开关",1.0,5.66,11.4,.35,12,MUTED)
+    text(s,"现状已具备改造基础：X-LLM-Key 请求头、ALLOW_SERVER_KEY 开关与密钥优先级判断都在服务端，不涉及前端重构",.85,6.42,11.8,.35,12,TEAL)
+    note(s,"改进方案","方案分三步，每步都能独立上线。第一步先止血：服务端放一个演示密钥，按用户按日记账并设配额，超限直接拒绝，这样学生打开就能用，成本也可控。"
+        "第二步解决付费归属：教师上传班级密钥，服务端加密存储，学生请求自动带上；密钥优先级是个人 > 班级 > 服务端，学生想用自己的仍然可以。"
+        "第三步做治理：所有模型调用走统一网关，支持多供应商切换、限流、token 与延迟审计，将来换模型不用改业务代码。"
+        "配套风险对策：加密存储、日/月双配额、超限时降级为只用检索结果回答、保留一键停用。这些改造集中在服务端的模型调用入口，前端不需要重构。")
+
     s=page("下一阶段：从工程可用走向真实教学验证","阶段计划")
     card(s,"已完成","双端教学流程、界面与错误恢复\nRAG 混合召回、NumPy 索引与测试\n词法离线评测和来源追溯",.8,1.95,3.72,2.45)
     card(s,"接下来优先做","教师标注真实追问与困难负例\n固定样本比较 lexical / hybrid\n校准距离阈值与内容层级",4.8,1.95,3.72,2.45)
@@ -392,7 +440,7 @@ def verify_and_render():
     path=OUT/"Zhiyu_Stage_Report_2026-11-17.pptx"
     prs.save(path)
     check=Presentation(path)
-    assert len(check.slides)==18, len(check.slides)
+    assert len(check.slides)==20, len(check.slides)
     pictures=0
     for i,s in enumerate(check.slides,1):
         assert any(getattr(sh,"has_text_frame",False) for sh in s.shapes), i
@@ -407,11 +455,11 @@ def verify_and_render():
     run(["libreoffice","-env:UserInstallation=file:///tmp/zhiyu-report-office","--headless","--convert-to","pdf","--outdir",str(OUT),str(path)])
     pdf=path.with_suffix(".pdf");assert pdf.exists()
     info=run(["pdfinfo",str(pdf)])
-    assert re.search(r"Pages:\s+18\b",info),info
+    assert re.search(r"Pages:\s+20\b",info),info
     preview=Path(tempfile.mkdtemp(prefix="zhiyu-slide-preview-"))
     run(["pdftoppm","-scale-to","1000","-png",str(pdf),str(preview/"slide")])
     files=sorted(preview.glob("slide-*.png"))
-    assert len(files)==18
+    assert len(files)==20
     thumbs=[]
     for file in files:
         im=Image.open(file).convert("RGB");im.thumbnail((360,203));thumbs.append(im)
@@ -424,9 +472,9 @@ def verify_and_render():
     # Keep readable per-slide previews for teacher review.
     prevout=OUT/"previews";prevout.mkdir(exist_ok=True)
     for i,file in enumerate(files,1): shutil.copy(file,prevout/f"slide-{i:02d}.png")
-    evidence.update({"source_commit":SOURCE,"slide_count":18,"picture_count":pictures,"rendered_pdf_pages":18,"format":"16:9; editable text and diagrams; PNG screenshots"})
+    evidence.update({"source_commit":SOURCE,"slide_count":20,"picture_count":pictures,"rendered_pdf_pages":20,"format":"16:9; editable text and diagrams; PNG screenshots"})
     (OUT/"verification.json").write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding="utf-8")
-    print("PRESENTATION VERIFIED: 18 slides, 18 PDF pages,",pictures,"project pictures")
+    print("PRESENTATION VERIFIED: 20 slides, 20 PDF pages,",pictures,"project pictures")
 
 if __name__=="__main__":
     prepare_and_capture()

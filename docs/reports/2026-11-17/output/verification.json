@@ -1446,8 +1446,12 @@
     "dataset_sha256": "2e3a908a1bfc55b8e2595e296b29cc4f6bed2e21a25b46f0ea5f2bd0ce97c589"
   },
   "source_commit": "f1396f10f6e4a6a1671f6e5ffdfd45222b3f528f",
-  "slide_count": 18,
+  "slide_count": 20,
   "picture_count": 28,
-  "rendered_pdf_pages": 18,
-  "format": "16:9; editable text and diagrams; PNG screenshots"
+  "rendered_pdf_pages": 20,
+  "format": "16:9; editable text and diagrams; PNG screenshots",
+  "inserted_pages": [
+    "16 接入现状：先用使用者自己的密钥把流程跑通",
+    "17 改进方案：从自带密钥走到学生零配置"
+  ]
 }
