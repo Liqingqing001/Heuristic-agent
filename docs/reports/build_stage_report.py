@@ -117,6 +117,7 @@ const path = require('path');
  await page.getByRole('button',{name:'进入班级管理',exact:true}).waitFor(); await shot('teacher-home');
  await page.getByRole('button',{name:/去批阅/}).click();
  await page.locator('.teacher-panel').waitFor();
+ await page.locator('#submission-list').getByRole('button',{name:'批阅',exact:true}).first().click();
  await page.getByRole('dialog').waitFor();
  await shot('grading','[role="dialog"]');
  await page.keyboard.press('Escape'); await shot('teacher-workspace');
